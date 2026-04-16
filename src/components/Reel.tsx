@@ -120,7 +120,7 @@ interface ReelProps {
 export function Reel({ reelAtom }: ReelProps) {
   const state = useAtomValue(reelAtom);
   return (
-    <ReelFrame>
+    <ReelFrame data-reel={true}>
       {state.kind === 'resting' ? (
         <RestingWindow window={state.window} />
       ) : (

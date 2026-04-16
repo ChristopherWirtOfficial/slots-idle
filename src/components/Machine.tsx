@@ -1,11 +1,12 @@
 /** @jsxImportSource @emotion/react */
 import { css, keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { Reel } from './Reel';
 import { theme } from '../theme';
 import { SpinResult } from '../game/spin';
+import { PAYLINES } from '../game/paylines';
 import { reelAtoms } from '../state/reels';
 import { jackpotsAtom } from '../state/economy';
 import { ensureAudio } from '../audio/engine';
@@ -33,6 +34,30 @@ const jackpotShake = keyframes`
   60% { transform: translate(3px, 0); }
   70% { transform: translate(-2px, 0); }
   80% { transform: translate(1px, 0); }
+`;
+
+const drawInLine = keyframes`
+  0% { stroke-dashoffset: 100; opacity: 0.2; }
+  60% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+`;
+
+const pulseGlow = keyframes`
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 4px ${theme.color.goldBright})
+      drop-shadow(0 0 10px ${theme.color.gold});
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px ${theme.color.goldBright})
+      drop-shadow(0 0 22px ${theme.color.gold});
+  }
+`;
+
+const cellPulse = keyframes`
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.6; }
 `;
 
 // --- Layout ---
@@ -92,6 +117,34 @@ const Grid = styled.div<{ winning: boolean }>`
   ${(p) =>
     p.winning &&
     css`animation: ${winGlow} 1s ease-out;`}
+`;
+
+const PaylineOverlay = styled.svg`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  overflow: visible;
+`;
+
+const PaylinePolyline = styled.polyline<{ jackpot: boolean }>`
+  fill: none;
+  stroke: ${(p) => (p.jackpot ? theme.color.bigWin : theme.color.goldBright)};
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  animation:
+    ${drawInLine} 0.45s ease-out forwards,
+    ${pulseGlow} 1.2s ease-in-out 0.45s infinite;
+  vector-effect: non-scaling-stroke;
+`;
+
+const CellHighlight = styled.circle<{ jackpot: boolean }>`
+  fill: ${(p) => (p.jackpot ? theme.color.bigWin : theme.color.goldBright)};
+  animation: ${cellPulse} 1.2s ease-in-out infinite;
 `;
 
 const FloatWrap = styled.div`
@@ -206,6 +259,48 @@ export function Machine({
 }: MachineProps) {
   const [showFloat, setShowFloat] = useState<typeof lastFloat>(null);
   const [shaking, setShaking] = useState(false);
+  const [activeWinIdx, setActiveWinIdx] = useState<number | null>(null);
+
+  // Cell center positions as percentages of the Grid (0–100).
+  // Measured from live DOM so the SVG overlay lines up regardless of viewport size.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [cells, setCells] = useState({
+    cols: [16.67, 50, 83.33],
+    rows: [16.67, 50, 83.33],
+  });
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const measure = () => {
+      const reels = grid.querySelectorAll<HTMLElement>('[data-reel]');
+      if (reels.length !== 3) return;
+      const gridRect = grid.getBoundingClientRect();
+      if (gridRect.width === 0 || gridRect.height === 0) return;
+
+      const cols: number[] = [];
+      reels.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        cols.push(((r.left + r.width / 2 - gridRect.left) / gridRect.width) * 100);
+      });
+      const first = reels[0].getBoundingClientRect();
+      const cellH = first.height / 3;
+      const rowsPct = [0.5, 1.5, 2.5].map(
+        (m) => ((first.top + cellH * m - gridRect.top) / gridRect.height) * 100,
+      );
+      setCells({ cols, rows: rowsPct });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(grid);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
 
   const jackpots = useAtomValue(jackpotsAtom);
   const prevJackpots = useRef(jackpots);
@@ -228,6 +323,29 @@ export function Machine({
     }
   }, [lastFloat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Cycle through winning paylines after each spin; clear while spinning.
+  useEffect(() => {
+    if (spinning || !lastResult || lastResult.wins.length === 0) {
+      setActiveWinIdx(null);
+      return;
+    }
+    setActiveWinIdx(0);
+    if (lastResult.wins.length === 1) return;
+    const winCount = lastResult.wins.length;
+    const id = window.setInterval(() => {
+      setActiveWinIdx((i) => (i === null ? 0 : (i + 1) % winCount));
+    }, 1400);
+    return () => window.clearInterval(id);
+  }, [spinning, lastResult]);
+
+  const activeWin =
+    activeWinIdx !== null && lastResult ? lastResult.wins[activeWinIdx] : null;
+  const activePayline = activeWin
+    ? PAYLINES.find((p) => p.id === activeWin.paylineId)
+    : null;
+  const activeJackpot =
+    activeWin?.matchCount === 3 && activeWin.symbol.id === 'seven';
+
   const justWon = Boolean(lastResult && lastResult.totalPayout > 0 && !spinning);
   const winCount = lastResult?.wins.length ?? 0;
 
@@ -245,10 +363,34 @@ export function Machine({
         <PaylineBadge>5 lines</PaylineBadge>
       </Header>
 
-      <Grid winning={justWon}>
+      <Grid winning={justWon} ref={gridRef}>
         <Reel reelAtom={reelAtoms[0]} />
         <Reel reelAtom={reelAtoms[1]} />
         <Reel reelAtom={reelAtoms[2]} />
+
+        {activePayline && (
+          <PaylineOverlay
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            key={`${activeWinIdx}-${activePayline.id}`}
+          >
+            <PaylinePolyline
+              jackpot={activeJackpot}
+              points={activePayline.rows
+                .map((r, i) => `${cells.cols[i]},${cells.rows[r]}`)
+                .join(' ')}
+            />
+            {activePayline.rows.map((r, i) => (
+              <CellHighlight
+                key={i}
+                jackpot={activeJackpot}
+                cx={cells.cols[i]}
+                cy={cells.rows[r]}
+                r={2.5}
+              />
+            ))}
+          </PaylineOverlay>
+        )}
 
         {showFloat && (
           <FloatWrap>
@@ -285,9 +427,30 @@ export function Machine({
             font-family: ${theme.font.body};
             font-size: 12px;
             color: ${theme.color.ivoryDim};
+            min-height: 16px;
           `}
         >
-          {winCount} line{winCount === 1 ? '' : 's'} · last paid {lastResult.totalPayout.toLocaleString()}
+          {activeWin && activePayline ? (
+            <>
+              <span style={{ color: activeWin.symbol.color, fontWeight: 700 }}>
+                {activeWin.symbol.glyph}
+              </span>{' '}
+              <span style={{ color: theme.color.ivory }}>{activePayline.name}</span>{' '}
+              · +{activeWin.payout.toLocaleString()}
+              {winCount > 1 && (
+                <span
+                  css={css`color: ${theme.color.ivoryDim}; margin-left: 8px;`}
+                >
+                  ({(activeWinIdx ?? 0) + 1}/{winCount})
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              {winCount} line{winCount === 1 ? '' : 's'} · last paid{' '}
+              {lastResult.totalPayout.toLocaleString()}
+            </>
+          )}
         </div>
       )}
     </Card>

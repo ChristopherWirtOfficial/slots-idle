@@ -2,6 +2,7 @@ import { atom } from 'jotai';
 import { UPGRADES, costOf } from '../game/upgrades';
 import { spin } from '../game/spin';
 import { SYMBOLS } from '../game/symbols';
+import { PAYLINES } from '../game/paylines';
 import {
   NEAR_MISS_BONUS_MS,
   buildStrip,
@@ -70,10 +71,15 @@ export const spinActionAtom = atom(null, (get, set) => {
   set(chipsAtom, get(chipsAtom) - bet);
   set(lastFloatAtom, null);
 
-  // Near-miss: if the top-row symbols of reels 0 and 1 match, stretch reel 2.
-  // Cheap heuristic — any payline-level near-miss would be more accurate but
-  // this still buys dramatic pauses on the most visually obvious cases.
-  const willNearMiss = result.grid[0][0].id === result.grid[1][0].id;
+  // Near-miss: only when no paylines won but some payline has first-two-matching.
+  // Stretches reel 2 for drama on potentially-winning spins that almost-but-didn't.
+  const willNearMiss =
+    result.wins.length === 0 &&
+    PAYLINES.some((p) => {
+      const a = result.grid[0][p.rows[0]];
+      const b = result.grid[1][p.rows[1]];
+      return a.id === b.id;
+    });
 
   const startTime = nowMs();
   reelAtoms.forEach((reelAtom, i) => {
