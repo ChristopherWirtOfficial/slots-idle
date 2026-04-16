@@ -1,5 +1,13 @@
 import { playNoise, playNote, scheduleNote } from './engine';
 
+/** Per-cell tick during a spin — very short high click, heavily attenuated. */
+export function sfxReelTick(velocityCellsPerFrame: number): void {
+  // Quieter at high speed (they'd stack into noise) and when reel is nearly stopped.
+  // Peaks around v=0.4–0.8 cells/frame which is the "tactile clicks" zone.
+  const gain = Math.min(0.08, Math.max(0.02, velocityCellsPerFrame * 0.08));
+  playNoise(0.006, { filter: 'highpass', freq: 6000, peak: gain });
+}
+
 /** Pull the lever: short whoosh + low motor note. */
 export function sfxSpinStart(): void {
   playNoise(0.22, { filter: 'bandpass', freq: 500, q: 1.5, peak: 0.12 });

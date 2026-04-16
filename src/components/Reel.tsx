@@ -1,12 +1,13 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
 import { useAtomValue } from 'jotai';
-import { CSSProperties } from 'react';
+import { CSSProperties, useEffect, useRef } from 'react';
 import { PrimitiveAtom } from 'jotai';
 import { frameTimeAtom, ReelAnimState } from '../state/reels';
 import { easeOut, velocityCellsPerFrame } from '../game/animation';
 import { theme } from '../theme';
 import { SlotSymbol } from '../game/symbols';
+import { sfxReelTick } from '../audio/sfx';
 
 const ReelFrame = styled.div`
   --cell-h: clamp(92px, 28vw, 140px);
@@ -103,6 +104,18 @@ function SpinningReel({
   // (~0.5-2 cells/frame) that would otherwise read as wagon-wheeling.
   const vel = velocityCellsPerFrame(t, state.distanceCells, state.duration);
   const blurPx = Math.min(10, vel * 6);
+
+  // Per-cell tick: fire a short click each time an integer cell boundary
+  // is crossed. Fresh ref per SpinningReel mount (one per spin), so no
+  // stale state to clear between spins.
+  const lastCellIntRef = useRef(0);
+  useEffect(() => {
+    const intCells = Math.floor(cellsScrolled);
+    if (intCells > lastCellIntRef.current && vel > 0.02) {
+      sfxReelTick(vel);
+      lastCellIntRef.current = intCells;
+    }
+  });
 
   return (
     <Strip
