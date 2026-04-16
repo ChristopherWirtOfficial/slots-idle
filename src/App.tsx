@@ -12,6 +12,8 @@ import { startTickLoop } from './tick/loop';
 import { useAutospin } from './hooks/useAutospin';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
 import { useAnimationTick } from './hooks/useAnimationTick';
+import { useMasterVolume } from './hooks/useMasterVolume';
+import { VolumeControl } from './components/VolumeControl';
 
 import {
   chipsAtom,
@@ -190,6 +192,9 @@ export function App() {
   // Drives reel animations: frame time, landings, payout commit.
   useAnimationTick();
 
+  // Syncs volume/mute atoms into the audio engine's master gain.
+  useMasterVolume();
+
   const chips = useAtomValue(chipsAtom);
   const lifetimeWinnings = useAtomValue(lifetimeWinningsAtom);
   const totalEverWon = useAtomValue(totalEverWonAtom);
@@ -221,6 +226,7 @@ export function App() {
   return (
     <>
       <Global styles={globalStyles} />
+      <VolumeControl />
       <Page>
         <TopBanner>
           <BrandLine>An evening's diversion</BrandLine>

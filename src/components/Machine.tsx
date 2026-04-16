@@ -1,12 +1,15 @@
 /** @jsxImportSource @emotion/react */
 import { css, keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAtomValue } from 'jotai';
 import { Reel } from './Reel';
 import { Sunburst } from './Sunburst';
 import { theme } from '../theme';
 import { SpinResult } from '../game/spin';
 import { reelAtoms } from '../state/reels';
+import { jackpotsAtom } from '../state/economy';
+import { ensureAudio } from '../audio/engine';
 
 const float = keyframes`
   0% { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
@@ -19,7 +22,20 @@ const winPulse = keyframes`
   50% { box-shadow: ${theme.shadow.frame}, 0 0 80px ${theme.color.goldBright}; }
 `;
 
-const Cabinet = styled.section`
+const jackpotShake = keyframes`
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-6px, 2px); }
+  20% { transform: translate(5px, -3px); }
+  30% { transform: translate(-5px, 2px); }
+  40% { transform: translate(4px, -2px); }
+  50% { transform: translate(-4px, 1px); }
+  60% { transform: translate(3px, -1px); }
+  70% { transform: translate(-3px, 1px); }
+  80% { transform: translate(2px, 0); }
+  90% { transform: translate(-1px, 0); }
+`;
+
+const Cabinet = styled.section<{ shaking: boolean }>`
   position: relative;
   padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 40px) clamp(20px, 4vw, 36px);
   background:
@@ -29,6 +45,7 @@ const Cabinet = styled.section`
   box-shadow: ${theme.shadow.frame};
   overflow: hidden;
   width: 100%;
+  ${(p) => p.shaking && css`animation: ${jackpotShake} 0.7s ease-out;`}
 `;
 
 const Marquee = styled.h1`
@@ -206,6 +223,20 @@ export function Machine({
   lastResult,
 }: MachineProps) {
   const [showFloat, setShowFloat] = useState<typeof lastFloat>(null);
+  const [shaking, setShaking] = useState(false);
+
+  const jackpots = useAtomValue(jackpotsAtom);
+  const prevJackpots = useRef(jackpots);
+
+  useEffect(() => {
+    if (jackpots > prevJackpots.current) {
+      setShaking(true);
+      const t = window.setTimeout(() => setShaking(false), 700);
+      prevJackpots.current = jackpots;
+      return () => window.clearTimeout(t);
+    }
+    prevJackpots.current = jackpots;
+  }, [jackpots]);
 
   useEffect(() => {
     if (lastFloat) {
@@ -217,8 +248,13 @@ export function Machine({
 
   const justWon = Boolean(lastResult && lastResult.payout > 0 && !spinning);
 
+  const handlePull = () => {
+    ensureAudio(); // first user gesture initializes AudioContext
+    onSpin();
+  };
+
   return (
-    <Cabinet>
+    <Cabinet shaking={shaking}>
       <SunburstBg>
         <Sunburst size={700} rays={48} opacity={0.06} />
       </SunburstBg>
@@ -248,7 +284,7 @@ export function Machine({
           <ChipAmount css={css`font-size: 22px;`}>{bet.toLocaleString()}</ChipAmount>
         </BetDisplay>
 
-        <SpinButton onClick={onSpin} disabled={!canSpin}>
+        <SpinButton onClick={handlePull} disabled={!canSpin}>
           {spinning ? '—— spin ——' : 'Pull'}
         </SpinButton>
 

@@ -30,6 +30,14 @@ import {
   reelAtoms,
 } from './reels';
 import { SYMBOLS } from '../game/symbols';
+import {
+  sfxBigWin,
+  sfxJackpot,
+  sfxReelLand,
+  sfxSmallWin,
+  sfxSpinStart,
+  sfxUpgrade,
+} from '../audio/sfx';
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -75,6 +83,7 @@ export const spinActionAtom = atom(null, (get, set) => {
   });
 
   set(pendingResultAtom, result);
+  sfxSpinStart();
 });
 
 /**
@@ -92,6 +101,7 @@ export const animationTickAtom = atom(null, (get, set) => {
     if (s.kind !== 'spinning') continue;
     if (t - s.startTime >= s.duration) {
       set(reelAtom, { kind: 'resting', symbol: s.resultSymbol });
+      sfxReelLand();
     }
   }
 
@@ -111,6 +121,15 @@ export const animationTickAtom = atom(null, (get, set) => {
       pending.kind === 'three' && pending.reels[0].id === 'seven';
     if (isJackpot) set(jackpotsAtom, get(jackpotsAtom) + 1);
     set(pendingResultAtom, null);
+
+    // Outcome sounds — queued after the reel-land thump so they don't collide.
+    if (isJackpot) {
+      window.setTimeout(sfxJackpot, 120);
+    } else if (pending.kind === 'three') {
+      window.setTimeout(sfxBigWin, 100);
+    } else if (pending.kind === 'two') {
+      window.setTimeout(sfxSmallWin, 80);
+    }
   }
 });
 
@@ -125,6 +144,7 @@ export const buyUpgradeAtom = atom(null, (get, set, id: string) => {
 
   set(chipsAtom, get(chipsAtom) - cost);
   set(levelsAtom, { ...levels, [u.id]: lvl + 1 });
+  sfxUpgrade();
 });
 
 export const prestigeActionAtom = atom(null, (get, set) => {
