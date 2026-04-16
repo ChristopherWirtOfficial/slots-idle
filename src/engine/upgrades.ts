@@ -11,10 +11,9 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
     blurb: 'The floor staff slip you a chip between hands.',
     baseCost: 50,
     costMult: 1.55,
-    maxLevel: 20,
-    effect: (lvl) => 1 + Math.floor(lvl * 0.5),
-    format: (lvl) =>
-      `+${1 + Math.floor(lvl * 0.5)} chip${1 + Math.floor(lvl * 0.5) === 1 ? '' : 's'} / tick`,
+    maxLevel: 10,
+    effect: (lvl) => 1 + lvl,
+    format: (lvl) => `+${1 + lvl} chip${1 + lvl === 1 ? '' : 's'} / tick`,
   },
   {
     id: 'passiveRate',
