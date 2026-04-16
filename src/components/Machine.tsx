@@ -37,9 +37,8 @@ const jackpotShake = keyframes`
 `;
 
 const drawInLine = keyframes`
-  0% { stroke-dashoffset: 100; opacity: 0.2; }
-  60% { stroke-dashoffset: 0; opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 1; }
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 `;
 
 const pulseGlow = keyframes`
@@ -135,10 +134,9 @@ const PaylinePolyline = styled.polyline<{ jackpot: boolean }>`
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 100;
   animation:
-    ${drawInLine} 0.45s ease-out forwards,
-    ${pulseGlow} 1.2s ease-in-out 0.45s infinite;
+    ${drawInLine} 0.3s ease-out forwards,
+    ${pulseGlow} 1.2s ease-in-out 0.3s infinite;
   vector-effect: non-scaling-stroke;
 `;
 
@@ -376,7 +374,6 @@ export function Machine({
           >
             <PaylinePolyline
               jackpot={activeJackpot}
-              pathLength={100}
               points={activePayline.rows
                 .map((r, i) => `${cells.cols[i]},${cells.rows[r]}`)
                 .join(' ')}
