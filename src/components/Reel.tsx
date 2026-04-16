@@ -4,7 +4,7 @@ import { useAtomValue } from 'jotai';
 import { CSSProperties } from 'react';
 import { PrimitiveAtom } from 'jotai';
 import { frameTimeAtom, ReelAnimState } from '../state/reels';
-import { easeOut } from '../game/animation';
+import { easeOut, velocityCellsPerFrame } from '../game/animation';
 import { theme } from '../theme';
 import { SlotSymbol } from '../game/symbols';
 
@@ -65,7 +65,7 @@ const Strip = styled.div`
   will-change: transform;
 `;
 
-const Cell = styled.div<{ color: string; blurred: boolean }>`
+const Cell = styled.div<{ color: string }>`
   width: 100%;
   height: var(--cell-h);
   display: flex;
@@ -79,15 +79,10 @@ const Cell = styled.div<{ color: string; blurred: boolean }>`
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.6),
     0 0 12px ${(p) => p.color}66;
-  filter: ${(p) => (p.blurred ? 'blur(2px)' : 'none')};
 `;
 
-function CellView({ symbol, blurred }: { symbol: SlotSymbol; blurred: boolean }) {
-  return (
-    <Cell color={symbol.color} blurred={blurred}>
-      {symbol.glyph}
-    </Cell>
-  );
+function CellView({ symbol }: { symbol: SlotSymbol }) {
+  return <Cell color={symbol.color}>{symbol.glyph}</Cell>;
 }
 
 /**
@@ -104,15 +99,20 @@ function SpinningReel({
   const t = Math.min(1, elapsed / state.duration);
   const cellsScrolled = easeOut(t) * state.distanceCells;
 
-  // Motion blur only while moving quickly — last ~15% of spin sharpens the result.
-  const blurred = t < 0.85;
+  // Velocity-scaled blur smooths the transition through the aliasing zone
+  // (~0.5-2 cells/frame) that would otherwise read as wagon-wheeling.
+  const vel = velocityCellsPerFrame(t, state.distanceCells, state.duration);
+  const blurPx = Math.min(10, vel * 6);
 
   return (
     <Strip
-      style={{ ['--cells-scrolled' as string]: cellsScrolled } as CSSProperties}
+      style={{
+        ['--cells-scrolled' as string]: cellsScrolled,
+        filter: blurPx > 0.1 ? `blur(${blurPx.toFixed(2)}px)` : 'none',
+      } as CSSProperties}
     >
       {state.strip.map((sym, i) => (
-        <CellView key={i} symbol={sym} blurred={blurred} />
+        <CellView key={i} symbol={sym} />
       ))}
     </Strip>
   );
@@ -129,7 +129,7 @@ export function Reel({ reelAtom }: ReelProps) {
     <ReelFrame>
       {state.kind === 'resting' ? (
         <Strip>
-          <CellView symbol={state.symbol} blurred={false} />
+          <CellView symbol={state.symbol} />
         </Strip>
       ) : (
         <SpinningReel state={state} />

@@ -1,17 +1,18 @@
 import { SlotSymbol, rollSymbol } from './symbols';
 
-// Per-reel duration bounds.
-export const DURATION_MIN_MS = 1100;
-export const DURATION_MAX_MS = 2200;
+// Per-reel duration bounds. Bumped from 1.1-2.2s — the faster range was
+// landing cells in the wagon-wheel aliasing zone (~1 cell/frame).
+export const DURATION_MIN_MS = 1600;
+export const DURATION_MAX_MS = 2800;
 
 // When reels 0 and 1 match, reel 2 gets a longer roll — dramatic pause on
 // possible jackpot. The result is already determined; this is pure theatre.
-export const NEAR_MISS_BONUS_MS = 700;
+export const NEAR_MISS_BONUS_MS = 900;
 
 // How many cells scroll past during a spin. Keep it generous so the reel
 // feels like it's genuinely spinning, not flicking to the answer.
-export const DISTANCE_CELLS_MIN = 22;
-export const DISTANCE_CELLS_MAX = 42;
+export const DISTANCE_CELLS_MIN = 24;
+export const DISTANCE_CELLS_MAX = 44;
 
 export function rollDuration(
   rng: () => number = Math.random,
@@ -26,13 +27,37 @@ export function rollDistanceCells(rng: () => number = Math.random): number {
   );
 }
 
-// Ease-out quartic: fast start, smooth deceleration, no bounce.
-// Bounces on slot reels tend to look like bugs, not physics.
+// Ease-out quintic: f(t) = 1 - (1-t)^5. Derivative at 0 is 5, giving a
+// punchier initial launch and a gentler glide into the landing than quartic.
 export function easeOut(t: number): number {
   if (t >= 1) return 1;
   if (t <= 0) return 0;
   const inv = 1 - t;
-  return 1 - inv * inv * inv * inv;
+  return 1 - inv * inv * inv * inv * inv;
+}
+
+/**
+ * Derivative of easeOut at t, in "eased-fraction per unit t". Scale by
+ * (distance / duration) to get cells-per-ms; scale further for cells-per-frame.
+ */
+export function easeOutPrime(t: number): number {
+  if (t >= 1 || t <= 0) return 0;
+  const inv = 1 - t;
+  return 5 * inv * inv * inv * inv;
+}
+
+/**
+ * Instantaneous spin velocity in cells-per-frame at 60fps.
+ * Used to scale motion blur — blur = f(velocity) hides wagon-wheel aliasing
+ * as the reel decelerates through the eye's tracking threshold.
+ */
+export function velocityCellsPerFrame(
+  t: number,
+  distanceCells: number,
+  durationMs: number,
+): number {
+  const framesPerMs = 60 / 1000;
+  return (easeOutPrime(t) * distanceCells / durationMs) / framesPerMs;
 }
 
 /**
