@@ -366,7 +366,7 @@ export function Machine({
         <Reel reelAtom={reelAtoms[1]} />
         <Reel reelAtom={reelAtoms[2]} />
 
-        {activePayline && (
+        {activePayline && activeWin && (
           <PaylineOverlay
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
@@ -375,10 +375,11 @@ export function Machine({
             <PaylinePolyline
               jackpot={activeJackpot}
               points={activePayline.rows
+                .slice(0, activeWin.matchCount)
                 .map((r, i) => `${cells.cols[i]},${cells.rows[r]}`)
                 .join(' ')}
             />
-            {activePayline.rows.map((r, i) => (
+            {activePayline.rows.slice(0, activeWin.matchCount).map((r, i) => (
               <CellHighlight
                 key={i}
                 jackpot={activeJackpot}
