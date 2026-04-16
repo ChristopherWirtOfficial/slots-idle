@@ -376,6 +376,7 @@ export function Machine({
           >
             <PaylinePolyline
               jackpot={activeJackpot}
+              pathLength={100}
               points={activePayline.rows
                 .map((r, i) => `${cells.cols[i]},${cells.rows[r]}`)
                 .join(' ')}
