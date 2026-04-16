@@ -1,36 +1,40 @@
 import { atom } from 'jotai';
 import { SlotSymbol, SYMBOLS } from '../game/symbols';
 
+export type SymWindow = [SlotSymbol, SlotSymbol, SlotSymbol];
+
 export type ReelAnimState =
-  | { kind: 'resting'; symbol: SlotSymbol }
+  | { kind: 'resting'; window: SymWindow }
   | {
       kind: 'spinning';
-      startTime: number; // performance.now() at spin start
-      duration: number; // ms
-      distanceCells: number; // total cells the strip will scroll
-      resultSymbol: SlotSymbol;
-      strip: SlotSymbol[]; // strip[0] = prev symbol, strip[distanceCells] = result
+      startTime: number;
+      duration: number;
+      distanceCells: number;
+      resultWindow: SymWindow;
+      strip: SlotSymbol[]; // strip[0..2] = prev window, strip[distanceCells..+2] = result
     };
 
-const restingOn = (s: SlotSymbol): ReelAnimState => ({ kind: 'resting', symbol: s });
+const initialWindow = (): SymWindow => [
+  SYMBOLS[0],
+  SYMBOLS[1],
+  SYMBOLS[2],
+];
 
-export const reel0Atom = atom<ReelAnimState>(restingOn(SYMBOLS[0]));
-export const reel1Atom = atom<ReelAnimState>(restingOn(SYMBOLS[1]));
-export const reel2Atom = atom<ReelAnimState>(restingOn(SYMBOLS[2]));
+const restingOn = (w: SymWindow): ReelAnimState => ({ kind: 'resting', window: w });
+
+export const reel0Atom = atom<ReelAnimState>(restingOn(initialWindow()));
+export const reel1Atom = atom<ReelAnimState>(restingOn(initialWindow()));
+export const reel2Atom = atom<ReelAnimState>(restingOn(initialWindow()));
 
 export const reelAtoms = [reel0Atom, reel1Atom, reel2Atom] as const;
 
-/**
- * Bumped by the animation tick every frame. Reel components subscribe to
- * this only while their own state is `spinning` — resting reels don't re-render.
- */
+/** Frame time bumped by the animation tick; only SpinningReel subscribes. */
 export const frameTimeAtom = atom(0);
 
 export const anyReelSpinningAtom = atom((get) =>
   reelAtoms.some((a) => get(a).kind === 'spinning'),
 );
 
-// What symbol is each reel currently showing (at rest or pre-spin)?
-export function getCurrentSymbol(state: ReelAnimState): SlotSymbol {
-  return state.kind === 'resting' ? state.symbol : state.resultSymbol;
+export function getCurrentWindow(state: ReelAnimState): SymWindow {
+  return state.kind === 'resting' ? state.window : state.resultWindow;
 }

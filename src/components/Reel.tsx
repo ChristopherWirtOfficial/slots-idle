@@ -3,55 +3,36 @@ import styled from '@emotion/styled';
 import { useAtomValue } from 'jotai';
 import { CSSProperties, useEffect, useRef } from 'react';
 import { PrimitiveAtom } from 'jotai';
-import { frameTimeAtom, ReelAnimState } from '../state/reels';
+import { frameTimeAtom, ReelAnimState, SymWindow } from '../state/reels';
 import { easeOut, velocityCellsPerFrame } from '../game/animation';
 import { theme } from '../theme';
 import { SlotSymbol } from '../game/symbols';
 import { sfxReelTick } from '../audio/sfx';
 
 const ReelFrame = styled.div`
-  --cell-h: clamp(92px, 28vw, 140px);
+  --cell-h: clamp(62px, 18vw, 100px);
   position: relative;
-  width: clamp(72px, 22vw, 108px);
-  height: var(--cell-h);
-  background: linear-gradient(180deg, #1a0511 0%, #2a0a1f 50%, #1a0511 100%);
-  border: 2px solid ${theme.color.gold};
+  width: clamp(74px, 22vw, 110px);
+  height: calc(var(--cell-h) * 3);
+  background: linear-gradient(180deg, #100308 0%, #1f0818 50%, #100308 100%);
+  border: 1px solid ${theme.color.gold};
   border-radius: ${theme.radius.md};
   box-shadow:
     inset 0 0 24px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px ${theme.color.goldDeep},
-    0 0 0 4px ${theme.color.bg},
-    0 0 0 5px ${theme.color.goldDeep};
+    inset 0 0 0 1px ${theme.color.goldDeep};
   overflow: hidden;
 
+  /* Faint horizontal lines between the 3 cell bays */
   &::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent 0 4px,
-      rgba(0, 0, 0, 0.3) 4px 5px
-    );
-    pointer-events: none;
-    opacity: 0.3;
-    z-index: 2;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      ${theme.color.gold},
-      transparent
-    );
-    opacity: 0.4;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent 0 4px,
+        rgba(0, 0, 0, 0.18) 4px 5px
+      );
     pointer-events: none;
     z-index: 2;
   }
@@ -74,22 +55,28 @@ const Cell = styled.div<{ color: string }>`
   justify-content: center;
   font-family: ${theme.font.display};
   font-weight: 700;
-  font-size: clamp(46px, 14vw, 72px);
+  font-size: clamp(34px, 10vw, 56px);
   line-height: 1;
   color: ${(p) => p.color};
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.6),
-    0 0 12px ${(p) => p.color}66;
+    0 0 10px ${(p) => p.color}55;
 `;
 
 function CellView({ symbol }: { symbol: SlotSymbol }) {
   return <Cell color={symbol.color}>{symbol.glyph}</Cell>;
 }
 
-/**
- * Renders an active spinning reel — reads frame time and recomputes offset
- * each render. Split from Reel so resting reels don't subscribe to frame time.
- */
+function RestingWindow({ window }: { window: SymWindow }) {
+  return (
+    <Strip>
+      <CellView symbol={window[0]} />
+      <CellView symbol={window[1]} />
+      <CellView symbol={window[2]} />
+    </Strip>
+  );
+}
+
 function SpinningReel({
   state,
 }: {
@@ -100,14 +87,9 @@ function SpinningReel({
   const t = Math.min(1, elapsed / state.duration);
   const cellsScrolled = easeOut(t) * state.distanceCells;
 
-  // Velocity-scaled blur smooths the transition through the aliasing zone
-  // (~0.5-2 cells/frame) that would otherwise read as wagon-wheeling.
   const vel = velocityCellsPerFrame(t, state.distanceCells, state.duration);
   const blurPx = Math.min(10, vel * 6);
 
-  // Per-cell tick: fire a short click each time an integer cell boundary
-  // is crossed. Fresh ref per SpinningReel mount (one per spin), so no
-  // stale state to clear between spins.
   const lastCellIntRef = useRef(0);
   useEffect(() => {
     const intCells = Math.floor(cellsScrolled);
@@ -137,13 +119,10 @@ interface ReelProps {
 
 export function Reel({ reelAtom }: ReelProps) {
   const state = useAtomValue(reelAtom);
-
   return (
     <ReelFrame>
       {state.kind === 'resting' ? (
-        <Strip>
-          <CellView symbol={state.symbol} />
-        </Strip>
+        <RestingWindow window={state.window} />
       ) : (
         <SpinningReel state={state} />
       )}

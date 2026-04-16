@@ -1,17 +1,26 @@
-import { SYMBOLS, SlotSymbol, REEL_COUNT, TOTAL_WEIGHT } from './symbols';
+import { PAYLINES, Payline } from './paylines';
+import { REEL_COUNT, ROW_COUNT, SlotSymbol, SYMBOLS } from './symbols';
 
-export interface SpinResult {
-  reels: SlotSymbol[];
+export interface WinLine {
+  paylineId: string;
+  symbol: SlotSymbol;
+  matchCount: 2 | 3;
   payout: number;
-  kind: 'miss' | 'two' | 'three';
 }
 
-// Weighted roll with a "luck" parameter that shifts probability mass toward rare symbols.
-// luck in [0, 1+); 0 = baseline, higher = rarer symbols more likely.
+export interface SpinResult {
+  /** grid[col][row] — left→right, top→bottom. */
+  grid: SlotSymbol[][];
+  wins: WinLine[];
+  totalPayout: number;
+  hasJackpot: boolean;
+}
+
+/**
+ * Roll one symbol with `luck` shifting mass toward rarer symbols.
+ * luck in [0, 1+]; 0 = baseline, higher = rarer symbols more likely.
+ */
 function rollWithLuck(rng: () => number, luck: number): SlotSymbol {
-  // Reweight: rare symbols (later in array) get their weight boosted.
-  // We transform each weight by w * (1 + luck * rarityBoost)
-  // rarityBoost grows with rarity index.
   const weights = SYMBOLS.map((s, i) => {
     const rarityFactor = i / (SYMBOLS.length - 1); // 0..1
     return s.weight * (1 + luck * rarityFactor * 3);
@@ -25,48 +34,54 @@ function rollWithLuck(rng: () => number, luck: number): SlotSymbol {
   return SYMBOLS[0];
 }
 
+function evaluatePayline(
+  grid: SlotSymbol[][],
+  payline: Payline,
+  bet: number,
+  globalMult: number,
+): WinLine | null {
+  const [r0, r1, r2] = payline.rows;
+  const a = grid[0][r0];
+  const b = grid[1][r1];
+  const c = grid[2][r2];
+
+  if (a.id === b.id && b.id === c.id) {
+    const payout = Math.floor(bet * a.payout3 * globalMult);
+    if (payout === 0) return null;
+    return { paylineId: payline.id, symbol: a, matchCount: 3, payout };
+  }
+  if (a.id === b.id && a.payout2 > 0) {
+    const payout = Math.floor(bet * a.payout2 * globalMult);
+    if (payout === 0) return null;
+    return { paylineId: payline.id, symbol: a, matchCount: 2, payout };
+  }
+  return null;
+}
+
 export function spin(
   bet: number,
   luck: number,
   globalMult: number,
   rng: () => number = Math.random,
 ): SpinResult {
-  const reels: SlotSymbol[] = [];
-  for (let i = 0; i < REEL_COUNT; i++) {
-    reels.push(rollWithLuck(rng, luck));
+  // Build 3×3 grid column-first.
+  const grid: SlotSymbol[][] = [];
+  for (let col = 0; col < REEL_COUNT; col++) {
+    const column: SlotSymbol[] = [];
+    for (let row = 0; row < ROW_COUNT; row++) {
+      column.push(rollWithLuck(rng, luck));
+    }
+    grid.push(column);
   }
 
-  // Payout: 3-match > 2-match (first two reels, classic slots convention)
-  let payout = 0;
-  let kind: SpinResult['kind'] = 'miss';
-  if (reels[0].id === reels[1].id && reels[1].id === reels[2].id) {
-    payout = bet * reels[0].payout3;
-    kind = 'three';
-  } else if (reels[0].id === reels[1].id && reels[0].payout2 > 0) {
-    payout = bet * reels[0].payout2;
-    kind = 'two';
+  const wins: WinLine[] = [];
+  for (const p of PAYLINES) {
+    const w = evaluatePayline(grid, p, bet, globalMult);
+    if (w) wins.push(w);
   }
 
-  payout = Math.floor(payout * globalMult);
-  return { reels, payout, kind };
-}
+  const totalPayout = wins.reduce((s, w) => s + w.payout, 0);
+  const hasJackpot = wins.some((w) => w.matchCount === 3 && w.symbol.id === 'seven');
 
-// Expected RTP sanity check — useful for tuning later
-export function theoreticalRTP(luck: number, globalMult: number): number {
-  const weights = SYMBOLS.map((s, i) => {
-    const rarityFactor = i / (SYMBOLS.length - 1);
-    return s.weight * (1 + luck * rarityFactor * 3);
-  });
-  const total = weights.reduce((a, b) => a + b, 0);
-  const probs = weights.map((w) => w / total);
-  let rtp = 0;
-  SYMBOLS.forEach((s, i) => {
-    const p3 = probs[i] ** 3;
-    const p2 = probs[i] ** 2 * (1 - probs[i]);
-    rtp += p3 * s.payout3 + p2 * s.payout2;
-  });
-  return rtp * globalMult;
+  return { grid, wins, totalPayout, hasJackpot };
 }
-
-// Silence unused export warning during strict builds if unused
-void TOTAL_WEIGHT;

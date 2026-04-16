@@ -15,22 +15,22 @@ export const UPGRADES: UpgradeDef[] = [
   {
     id: 'passiveAmount',
     name: 'House Gratuity',
-    blurb: 'The floor staff slip you chips between hands. +1 per payout.',
-    baseCost: 30,
-    costMult: 1.5,
-    maxLevel: 25,
-    effect: (lvl) => 1 + lvl, // chips per tick
-    format: (lvl) => `+${1 + lvl} chip${1 + lvl === 1 ? '' : 's'} / tick`,
+    blurb: 'The floor staff slip you a chip between hands.',
+    baseCost: 50,
+    costMult: 1.55,
+    maxLevel: 20,
+    effect: (lvl) => 1 + Math.floor(lvl * 0.5), // 1, 1, 2, 2, 3, 3... slower growth
+    format: (lvl) => `+${1 + Math.floor(lvl * 0.5)} chip${1 + Math.floor(lvl * 0.5) === 1 ? '' : 's'} / tick`,
   },
   {
     id: 'passiveRate',
     name: 'Brisk Service',
-    blurb: 'Shorter pours, more frequent tips. 5s baseline down to 0.5s.',
-    baseCost: 100,
-    costMult: 1.55,
-    maxLevel: 18,
-    effect: (lvl) => Math.max(500, 5000 - lvl * 250), // ms between ticks
-    format: (lvl) => `${(Math.max(500, 5000 - lvl * 250) / 1000).toFixed(2)}s / tick`,
+    blurb: 'Shorter pours, more frequent tips. 10s baseline down to 2s.',
+    baseCost: 120,
+    costMult: 1.6,
+    maxLevel: 16,
+    effect: (lvl) => Math.max(2000, 10000 - lvl * 500), // ms between ticks
+    format: (lvl) => `${(Math.max(2000, 10000 - lvl * 500) / 1000).toFixed(1)}s / tick`,
   },
   {
     id: 'bet',

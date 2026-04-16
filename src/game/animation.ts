@@ -62,21 +62,21 @@ export function velocityCellsPerFrame(
 
 /**
  * Build the strip of symbols the reel will scroll through.
- * strip[0] is the previously visible symbol (seamless start).
- * strip[distanceCells] is the result (pinned landing spot).
- * Everything between is randomly streamed — this is the "laying track" layer,
- * and future upgrades can inject/reweight these without touching the result.
+ * The first 3 cells are the previously visible window (seamless start).
+ * The last 3 cells (at indices distanceCells..distanceCells+2) are the
+ * result — the window visible when the reel stops.
+ * Random symbols fill the middle.
  */
 export function buildStrip(
-  prevSymbol: SlotSymbol,
-  resultSymbol: SlotSymbol,
+  prevWindow: [SlotSymbol, SlotSymbol, SlotSymbol],
+  resultWindow: [SlotSymbol, SlotSymbol, SlotSymbol],
   distanceCells: number,
   rng: () => number = Math.random,
 ): SlotSymbol[] {
-  const strip: SlotSymbol[] = [prevSymbol];
-  for (let i = 1; i < distanceCells; i++) {
+  const strip: SlotSymbol[] = [prevWindow[0], prevWindow[1], prevWindow[2]];
+  for (let i = 3; i < distanceCells; i++) {
     strip.push(rollSymbol(rng));
   }
-  strip.push(resultSymbol);
+  strip.push(resultWindow[0], resultWindow[1], resultWindow[2]);
   return strip;
 }
