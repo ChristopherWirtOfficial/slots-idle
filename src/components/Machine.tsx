@@ -5,9 +5,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { Reel } from './Reel';
 import { theme } from '../theme';
-import { SpinResult } from '../game/spin';
-import { PAYLINES } from '../game/paylines';
-import { reelAtoms } from '../state/reels';
+import { SpinResult } from '../engine/types';
+import { reelCountAtom, activeMachineAtom, resolvedConfigAtom } from '../state/machine';
 import { jackpotsAtom } from '../state/economy';
 import { ensureAudio } from '../audio/engine';
 
@@ -36,7 +35,7 @@ const jackpotShake = keyframes`
   80% { transform: translate(1px, 0); }
 `;
 
-const drawInLine = keyframes`
+const fadeInLine = keyframes`
   0% { opacity: 0; }
   100% { opacity: 1; }
 `;
@@ -59,7 +58,7 @@ const cellPulse = keyframes`
   50% { opacity: 0.6; }
 `;
 
-// --- Layout ---
+// --- Styled ---
 
 const Card = styled.section<{ shaking: boolean }>`
   position: relative;
@@ -92,7 +91,7 @@ const Marquee = styled.h1`
   margin: 0;
 `;
 
-const PaylineBadge = styled.div`
+const InfoBadge = styled.div`
   font-family: ${theme.font.mono};
   font-size: 10px;
   letter-spacing: 0.2em;
@@ -113,9 +112,7 @@ const Grid = styled.div<{ winning: boolean }>`
   padding: clamp(10px, 2vw, 14px);
   background: linear-gradient(180deg, ${theme.color.bgDeep}, ${theme.color.black});
   border-radius: ${theme.radius.md};
-  ${(p) =>
-    p.winning &&
-    css`animation: ${winGlow} 1s ease-out;`}
+  ${(p) => p.winning && css`animation: ${winGlow} 1s ease-out;`}
 `;
 
 const PaylineOverlay = styled.svg`
@@ -135,12 +132,12 @@ const PaylinePolyline = styled.polyline<{ jackpot: boolean }>`
   stroke-linecap: round;
   stroke-linejoin: round;
   animation:
-    ${drawInLine} 0.3s ease-out forwards,
+    ${fadeInLine} 0.3s ease-out forwards,
     ${pulseGlow} 1.2s ease-in-out 0.3s infinite;
   vector-effect: non-scaling-stroke;
 `;
 
-const CellHighlight = styled.circle<{ jackpot: boolean }>`
+const CellHighlightDot = styled.circle<{ jackpot: boolean }>`
   fill: ${(p) => (p.jackpot ? theme.color.bigWin : theme.color.goldBright)};
   animation: ${cellPulse} 1.2s ease-in-out infinite;
 `;
@@ -186,7 +183,6 @@ const WinSummary = styled.div`
   font-family: ${theme.font.body};
   font-size: 12px;
   color: ${theme.color.ivoryDim};
-  /* Reserve space so the layout doesn't shift when a win appears/disappears. */
   min-height: 18px;
   line-height: 1.5;
 `;
@@ -270,12 +266,15 @@ export function Machine({
   const [shaking, setShaking] = useState(false);
   const [activeWinIdx, setActiveWinIdx] = useState<number | null>(null);
 
-  // Cell center positions as percentages of the Grid (0–100).
-  // Measured from live DOM so the SVG overlay lines up regardless of viewport size.
+  const reelCount = useAtomValue(reelCountAtom);
+  const machine = useAtomValue(activeMachineAtom);
+  const config = useAtomValue(resolvedConfigAtom);
+
+  // --- Cell-center measurement for the highlight overlay ---
   const gridRef = useRef<HTMLDivElement>(null);
-  const [cells, setCells] = useState({
-    cols: [16.67, 50, 83.33],
-    rows: [16.67, 50, 83.33],
+  const [cells, setCells] = useState<{ cols: number[]; rows: number[] }>({
+    cols: [],
+    rows: [],
   });
 
   useLayoutEffect(() => {
@@ -284,7 +283,7 @@ export function Machine({
 
     const measure = () => {
       const reels = grid.querySelectorAll<HTMLElement>('[data-reel]');
-      if (reels.length !== 3) return;
+      if (reels.length === 0) return;
       const gridRect = grid.getBoundingClientRect();
       if (gridRect.width === 0 || gridRect.height === 0) return;
 
@@ -294,10 +293,12 @@ export function Machine({
         cols.push(((r.left + r.width / 2 - gridRect.left) / gridRect.width) * 100);
       });
       const first = reels[0].getBoundingClientRect();
-      const cellH = first.height / 3;
-      const rowsPct = [0.5, 1.5, 2.5].map(
-        (m) => ((first.top + cellH * m - gridRect.top) / gridRect.height) * 100,
-      );
+      const rowsN = config.topology.rowCount;
+      const cellH = first.height / rowsN;
+      const rowsPct = Array.from({ length: rowsN }, (_, i) => {
+        const mid = (i + 0.5) * cellH;
+        return ((first.top + mid - gridRect.top) / gridRect.height) * 100;
+      });
       setCells({ cols, rows: rowsPct });
     };
 
@@ -309,8 +310,9 @@ export function Machine({
       ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, []);
+  }, [reelCount, config.topology.rowCount]);
 
+  // --- Jackpot shake ---
   const jackpots = useAtomValue(jackpotsAtom);
   const prevJackpots = useRef(jackpots);
 
@@ -324,6 +326,7 @@ export function Machine({
     prevJackpots.current = jackpots;
   }, [jackpots]);
 
+  // --- Float toast ---
   useEffect(() => {
     if (lastFloat) {
       setShowFloat(lastFloat);
@@ -332,7 +335,7 @@ export function Machine({
     }
   }, [lastFloat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cycle through winning paylines after each spin; clear while spinning.
+  // --- Cycle active winning payline ---
   useEffect(() => {
     if (spinning || !lastResult || lastResult.wins.length === 0) {
       setActiveWinIdx(null);
@@ -349,11 +352,9 @@ export function Machine({
 
   const activeWin =
     activeWinIdx !== null && lastResult ? lastResult.wins[activeWinIdx] : null;
-  const activePayline = activeWin
-    ? PAYLINES.find((p) => p.id === activeWin.paylineId)
+  const activeHighlight = activeWin
+    ? machine.highlightsForWin(activeWin, config)
     : null;
-  const activeJackpot =
-    activeWin?.matchCount === 3 && activeWin.symbol.id === 'seven';
 
   const justWon = Boolean(lastResult && lastResult.totalPayout > 0 && !spinning);
   const winCount = lastResult?.wins.length ?? 0;
@@ -368,34 +369,37 @@ export function Machine({
   return (
     <Card shaking={shaking}>
       <Header>
-        <Marquee>Lucky Parlour</Marquee>
-        <PaylineBadge>5 lines</PaylineBadge>
+        <Marquee>{machine.name}</Marquee>
+        <InfoBadge>
+          {config.topology.reelCount}×{config.topology.rowCount} · {config.paylines.length} lines
+        </InfoBadge>
       </Header>
 
       <Grid winning={justWon} ref={gridRef}>
-        <Reel reelAtom={reelAtoms[0]} />
-        <Reel reelAtom={reelAtoms[1]} />
-        <Reel reelAtom={reelAtoms[2]} />
+        {Array.from({ length: reelCount }, (_, i) => (
+          <Reel key={i} reelIdx={i} />
+        ))}
 
-        {activePayline && activeWin && (
+        {activeHighlight && activeHighlight.cells.length > 0 && cells.cols.length > 0 && (
           <PaylineOverlay
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
-            key={`${activeWinIdx}-${activePayline.id}`}
+            key={`${activeWinIdx}`}
           >
-            <PaylinePolyline
-              jackpot={activeJackpot}
-              points={activePayline.rows
-                .slice(0, activeWin.matchCount)
-                .map((r, i) => `${cells.cols[i]},${cells.rows[r]}`)
-                .join(' ')}
-            />
-            {activePayline.rows.slice(0, activeWin.matchCount).map((r, i) => (
-              <CellHighlight
+            {activeHighlight.line && activeHighlight.line.length >= 2 && (
+              <PaylinePolyline
+                jackpot={activeHighlight.variant === 'jackpot'}
+                points={activeHighlight.line
+                  .map((p) => `${cells.cols[p.col] ?? 0},${cells.rows[p.row] ?? 0}`)
+                  .join(' ')}
+              />
+            )}
+            {activeHighlight.cells.map((p, i) => (
+              <CellHighlightDot
                 key={i}
-                jackpot={activeJackpot}
-                cx={cells.cols[i]}
-                cy={cells.rows[r]}
+                jackpot={activeHighlight.variant === 'jackpot'}
+                cx={cells.cols[p.col] ?? 0}
+                cy={cells.rows[p.row] ?? 0}
                 r={2.5}
               />
             ))}
@@ -432,12 +436,12 @@ export function Machine({
       <WinSummary>
         {lastResult && !spinning && lastResult.totalPayout > 0 && (
           <>
-            {activeWin && activePayline ? (
+            {activeWin ? (
               <>
                 <span style={{ color: activeWin.symbol.color, fontWeight: 700 }}>
                   {activeWin.symbol.glyph}
                 </span>{' '}
-                <span style={{ color: theme.color.ivory }}>{activePayline.name}</span>{' '}
+                <span style={{ color: theme.color.ivory }}>{activeWin.name}</span>{' '}
                 · +{activeWin.payout.toLocaleString()}
                 {winCount > 1 && (
                   <span

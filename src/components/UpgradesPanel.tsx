@@ -1,7 +1,8 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
-import { UPGRADES } from '../game/upgrades';
+import { useAtomValue } from 'jotai';
+import { allUpgradesAtom } from '../state/machine';
 import { theme } from '../theme';
 
 const Panel = styled.aside`
@@ -129,16 +130,18 @@ interface UpgradesPanelProps {
 }
 
 export function UpgradesPanel({ levels, costs, chips, onBuy }: UpgradesPanelProps) {
+  const upgrades = useAtomValue(allUpgradesAtom);
   return (
     <Panel>
       <PanelTitle>The Parlour</PanelTitle>
       <PanelSub>Improvements</PanelSub>
 
-      {UPGRADES.map((u) => {
+      {upgrades.map((u) => {
         const lvl = levels[u.id] ?? 0;
         const cost = costs[u.id] ?? 0;
         const maxed = lvl >= u.maxLevel;
         const affordable = !maxed && chips >= cost;
+        const effectLabel = u.format ? u.format(lvl) : `Level ${lvl}`;
         return (
           <Row
             key={u.id}
@@ -153,7 +156,7 @@ export function UpgradesPanel({ levels, costs, chips, onBuy }: UpgradesPanelProp
             </RowTop>
             <Blurb>{u.blurb}</Blurb>
             <RowBottom>
-              <Effect>{u.format(lvl)}</Effect>
+              <Effect>{effectLabel}</Effect>
               {!maxed && (
                 <Cost affordable={affordable}>
                   {cost.toLocaleString()} <span css={css`color:${theme.color.ivoryDim};font-weight:400;`}>chips</span>

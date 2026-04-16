@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { SpinResult } from '../game/spin';
+import { SpinResult } from '../engine/types';
 
 export const pendingResultAtom = atom<SpinResult | null>(null);
 export const lastResultAtom = atom<SpinResult | null>(null);

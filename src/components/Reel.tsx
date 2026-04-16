@@ -2,18 +2,23 @@
 import styled from '@emotion/styled';
 import { useAtomValue } from 'jotai';
 import { CSSProperties, useEffect, useRef } from 'react';
-import { PrimitiveAtom } from 'jotai';
-import { frameTimeAtom, ReelAnimState, SymWindow } from '../state/reels';
-import { easeOut, velocityCellsPerFrame } from '../game/animation';
+import {
+  frameTimeAtom,
+  ReelAnimState,
+  reelStateAtomFamily,
+  SymWindow,
+} from '../state/reels';
+import { rowCountAtom } from '../state/machine';
+import { easeOut, velocityCellsPerFrame } from '../engine/animation';
 import { theme } from '../theme';
-import { SlotSymbol } from '../game/symbols';
+import { SlotSymbol } from '../engine/types';
 import { sfxReelTick } from '../audio/sfx';
 
 const ReelFrame = styled.div`
   --cell-h: clamp(62px, 18vw, 100px);
   position: relative;
   width: clamp(74px, 22vw, 110px);
-  height: calc(var(--cell-h) * 3);
+  height: calc(var(--cell-h) * var(--row-count, 3));
   background: linear-gradient(180deg, #100308 0%, #1f0818 50%, #100308 100%);
   border: 1px solid ${theme.color.gold};
   border-radius: ${theme.radius.md};
@@ -22,17 +27,15 @@ const ReelFrame = styled.div`
     inset 0 0 0 1px ${theme.color.goldDeep};
   overflow: hidden;
 
-  /* Faint horizontal lines between the 3 cell bays */
   &::before {
     content: '';
     position: absolute;
     inset: 0;
-    background:
-      repeating-linear-gradient(
-        0deg,
-        transparent 0 4px,
-        rgba(0, 0, 0, 0.18) 4px 5px
-      );
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0 4px,
+      rgba(0, 0, 0, 0.18) 4px 5px
+    );
     pointer-events: none;
     z-index: 2;
   }
@@ -70,9 +73,9 @@ function CellView({ symbol }: { symbol: SlotSymbol }) {
 function RestingWindow({ window }: { window: SymWindow }) {
   return (
     <Strip>
-      <CellView symbol={window[0]} />
-      <CellView symbol={window[1]} />
-      <CellView symbol={window[2]} />
+      {window.map((s, i) => (
+        <CellView key={i} symbol={s} />
+      ))}
     </Strip>
   );
 }
@@ -114,13 +117,18 @@ function SpinningReel({
 }
 
 interface ReelProps {
-  reelAtom: PrimitiveAtom<ReelAnimState>;
+  reelIdx: number;
 }
 
-export function Reel({ reelAtom }: ReelProps) {
-  const state = useAtomValue(reelAtom);
+export function Reel({ reelIdx }: ReelProps) {
+  const state = useAtomValue(reelStateAtomFamily(reelIdx));
+  const rowCount = useAtomValue(rowCountAtom);
+
   return (
-    <ReelFrame data-reel={true}>
+    <ReelFrame
+      data-reel={true}
+      style={{ ['--row-count' as string]: rowCount } as CSSProperties}
+    >
       {state.kind === 'resting' ? (
         <RestingWindow window={state.window} />
       ) : (

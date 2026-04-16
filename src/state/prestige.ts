@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { prestigeGain, prestigeMultiplier } from '../game/upgrades';
+import { prestigeGain, prestigeMultiplier } from '../engine/upgrades';
 import { lifetimeWinningsAtom } from './economy';
 import { multiplierAtom } from './upgrades';
 

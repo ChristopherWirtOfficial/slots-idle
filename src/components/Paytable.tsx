@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
-import { SYMBOLS } from '../game/symbols';
+import { useAtomValue } from 'jotai';
+import { resolvedConfigAtom } from '../state/machine';
 import { theme } from '../theme';
 
 const Panel = styled.div`
@@ -49,15 +50,28 @@ const Glyph = styled.span<{ c: string }>`
   color: ${(p) => p.c};
 `;
 
+const Payouts = styled.span`
+  display: inline-flex;
+  gap: 6px;
+  font-family: ${theme.font.mono};
+  font-size: 11px;
+  color: ${theme.color.gold};
+`;
+
+const Tier = styled.span<{ dim?: boolean }>`
+  opacity: ${(p) => (p.dim ? 0.35 : 1)};
+`;
+
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 2px 18px;
   margin-bottom: 10px;
 `;
 
 const PaylinesBox = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
   padding-top: 8px;
@@ -65,55 +79,61 @@ const PaylinesBox = styled.div`
 `;
 
 const PlMini = styled.svg`
-  width: 36px;
   height: 28px;
 `;
 
-function paylineGraph(rows: [number, number, number]) {
-  // Normalize to SVG coords, 3 dots per column
-  const cx = (i: number) => 6 + i * 12;
-  const cy = (r: number) => 6 + r * 8;
-  const pts = rows.map((r, i) => `${cx(i)},${cy(r)}`).join(' ');
-  return { pts };
-}
-
-const lines: [number, number, number][] = [
-  [0, 0, 0],
-  [1, 1, 1],
-  [2, 2, 2],
-  [0, 1, 2],
-  [2, 1, 0],
-];
-
 export function Paytable() {
+  const config = useAtomValue(resolvedConfigAtom);
+  const { reelCount, rowCount } = config.topology;
+
+  // Which match counts are reachable at the current reelCount?
+  const tiers: number[] = [];
+  for (let n = 3; n <= reelCount; n++) tiers.push(n);
+
+  // Payline preview SVG sizing
+  const dotSpacingX = 12;
+  const dotSpacingY = 8;
+  const padX = 6;
+  const padY = 6;
+  const svgW = padX * 2 + (reelCount - 1) * dotSpacingX;
+  const svgH = padY * 2 + (rowCount - 1) * dotSpacingY;
+  const cx = (col: number) => padX + col * dotSpacingX;
+  const cy = (row: number) => padY + row * dotSpacingY;
+
   return (
     <Panel>
       <Title>Paytable</Title>
       <Grid>
-        {SYMBOLS.map((s) => (
+        {config.symbols.map((s) => (
           <Row key={s.id}>
             <Left>
               <Glyph c={s.color}>{s.glyph}</Glyph>
               <span>{s.name}</span>
             </Left>
-            <span style={{ color: theme.color.gold, fontFamily: theme.font.mono }}>
-              ×{s.payout3}
-            </span>
+            <Payouts>
+              {tiers.map((n) => {
+                const val = s.payouts[n];
+                return (
+                  <Tier key={n} dim={val === undefined || val === 0}>
+                    ×{val ?? '—'}
+                  </Tier>
+                );
+              })}
+            </Payouts>
           </Row>
         ))}
       </Grid>
       <PaylinesBox>
-        {lines.map((rows, idx) => {
-          const g = paylineGraph(rows);
+        {config.paylines.map((p) => {
+          const pts = p.rows.map((row, col) => `${cx(col)},${cy(row)}`).join(' ');
           return (
-            <PlMini key={idx} viewBox="0 0 36 28">
-              {/* 3x3 dot grid */}
-              {[0, 1, 2].map((col) =>
-                [0, 1, 2].map((row) => (
+            <PlMini key={p.id} viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: svgW }}>
+              {Array.from({ length: reelCount }, (_, col) =>
+                Array.from({ length: rowCount }, (_, row) => (
                   <circle
                     key={`${col}-${row}`}
-                    cx={6 + col * 12}
-                    cy={6 + row * 8}
+                    cx={cx(col)}
+                    cy={cy(row)}
                     r={1.4}
                     fill={theme.color.ivoryDim}
                     opacity={0.35}
@@ -121,7 +141,7 @@ export function Paytable() {
                 )),
               )}
               <polyline
-                points={g.pts}
+                points={pts}
                 fill="none"
                 stroke={theme.color.gold}
                 strokeWidth={1.4}

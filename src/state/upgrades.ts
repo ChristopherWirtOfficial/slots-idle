@@ -1,40 +1,36 @@
 import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
-import { UPGRADES, UpgradeDef, costOf } from '../game/upgrades';
+import { GLOBAL_UPGRADES, costOf } from '../engine/upgrades';
+import { levelsAtom } from './levels';
+import { allUpgradesAtom } from './machine';
 
-const KEY = (k: string) => `lucky-idle-slots:v1:${k}`;
-
-const initialLevels: Record<string, number> = Object.fromEntries(
-  UPGRADES.map((u) => [u.id, 0]),
-);
-
-export const levelsAtom = atomWithStorage<Record<string, number>>(
-  KEY('levels'),
-  initialLevels,
-);
-
-// Derived: current cost to buy the next level of each upgrade.
+/** Cost of the next level purchase per upgrade id (engine + machine). */
 export const costsAtom = atom((get) => {
+  const upgrades = get(allUpgradesAtom);
   const levels = get(levelsAtom);
-  return Object.fromEntries(
-    UPGRADES.map((u) => [u.id, costOf(u, levels[u.id] ?? 0)]),
-  ) as Record<string, number>;
+  const result: Record<string, number> = {};
+  for (const u of upgrades) {
+    result[u.id] = costOf(u, levels[u.id] ?? 0);
+  }
+  return result;
 });
 
-// Build a derived atom for a single upgrade's current effect.
-// Id-based so array ordering can change freely.
-function upgradeEffectAtom(id: string) {
+/**
+ * Derived effect atom for a known global upgrade. Machine-specific
+ * upgrades are read inside the machine's resolveConfig; no dedicated
+ * atom needed.
+ */
+function globalEffectAtom(id: string) {
   return atom((get) => {
-    const u: UpgradeDef | undefined = UPGRADES.find((x) => x.id === id);
-    if (!u) return 0;
+    const u = GLOBAL_UPGRADES.find((x) => x.id === id);
+    if (!u || !u.effect) return 0;
     return u.effect(get(levelsAtom)[id] ?? 0);
   });
 }
 
-export const betAtom = upgradeEffectAtom('bet');
-export const luckAtom = upgradeEffectAtom('luck');
-export const autoPerTickAtom = upgradeEffectAtom('autospin');
-export const tickMsAtom = upgradeEffectAtom('speed');
-export const multiplierAtom = upgradeEffectAtom('multiplier');
-export const passiveAmountAtom = upgradeEffectAtom('passiveAmount');
-export const passiveRateMsAtom = upgradeEffectAtom('passiveRate');
+export const betAtom = globalEffectAtom('bet');
+export const luckAtom = globalEffectAtom('luck');
+export const autoPerTickAtom = globalEffectAtom('autospin');
+export const tickMsAtom = globalEffectAtom('speed');
+export const multiplierAtom = globalEffectAtom('multiplier');
+export const passiveAmountAtom = globalEffectAtom('passiveAmount');
+export const passiveRateMsAtom = globalEffectAtom('passiveRate');

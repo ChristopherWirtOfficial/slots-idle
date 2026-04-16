@@ -1,17 +1,10 @@
-// Upgrades — the incremental meat. Costs scale; effects compound.
+import { UpgradeDef } from './types';
 
-export interface UpgradeDef {
-  id: string;
-  name: string;
-  blurb: string;
-  baseCost: number;
-  costMult: number;
-  maxLevel: number;
-  effect: (level: number) => number; // semantic varies per upgrade
-  format: (level: number) => string; // human-readable current effect
-}
-
-export const UPGRADES: UpgradeDef[] = [
+/**
+ * Engine-level (global) upgrades. Machines contribute their own via
+ * Machine.upgrades; the engine merges both lists for UI + purchasing.
+ */
+export const GLOBAL_UPGRADES: UpgradeDef[] = [
   {
     id: 'passiveAmount',
     name: 'House Gratuity',
@@ -19,8 +12,9 @@ export const UPGRADES: UpgradeDef[] = [
     baseCost: 50,
     costMult: 1.55,
     maxLevel: 20,
-    effect: (lvl) => 1 + Math.floor(lvl * 0.5), // 1, 1, 2, 2, 3, 3... slower growth
-    format: (lvl) => `+${1 + Math.floor(lvl * 0.5)} chip${1 + Math.floor(lvl * 0.5) === 1 ? '' : 's'} / tick`,
+    effect: (lvl) => 1 + Math.floor(lvl * 0.5),
+    format: (lvl) =>
+      `+${1 + Math.floor(lvl * 0.5)} chip${1 + Math.floor(lvl * 0.5) === 1 ? '' : 's'} / tick`,
   },
   {
     id: 'passiveRate',
@@ -29,8 +23,9 @@ export const UPGRADES: UpgradeDef[] = [
     baseCost: 120,
     costMult: 1.6,
     maxLevel: 16,
-    effect: (lvl) => Math.max(2000, 10000 - lvl * 500), // ms between ticks
-    format: (lvl) => `${(Math.max(2000, 10000 - lvl * 500) / 1000).toFixed(1)}s / tick`,
+    effect: (lvl) => Math.max(2000, 10000 - lvl * 500),
+    format: (lvl) =>
+      `${(Math.max(2000, 10000 - lvl * 500) / 1000).toFixed(1)}s / tick`,
   },
   {
     id: 'bet',
@@ -39,7 +34,7 @@ export const UPGRADES: UpgradeDef[] = [
     baseCost: 50,
     costMult: 1.45,
     maxLevel: 50,
-    effect: (lvl) => 1 + lvl, // bet amount = 1 + level
+    effect: (lvl) => 1 + lvl,
     format: (lvl) => `Bet ${1 + lvl} chips`,
   },
   {
@@ -70,7 +65,8 @@ export const UPGRADES: UpgradeDef[] = [
     costMult: 1.7,
     maxLevel: 18,
     effect: (lvl) => Math.max(200, 2000 - lvl * 100),
-    format: (lvl) => `${(Math.max(200, 2000 - lvl * 100) / 1000).toFixed(1)}s / tick`,
+    format: (lvl) =>
+      `${(Math.max(200, 2000 - lvl * 100) / 1000).toFixed(1)}s / tick`,
   },
   {
     id: 'multiplier',
@@ -84,23 +80,18 @@ export const UPGRADES: UpgradeDef[] = [
   },
 ];
 
-// Cost of the nth purchase of an upgrade (0-indexed level = next level to buy)
+/** Cost of the nth purchase of an upgrade (level = current, cost is for next). */
 export function costOf(u: UpgradeDef, currentLevel: number): number {
   return Math.ceil(u.baseCost * Math.pow(u.costMult, currentLevel));
 }
 
-// Prestige
-export interface PrestigeState {
-  highRollerPoints: number; // permanent currency
-  lifetimeWinnings: number;
-}
+// Prestige helpers — global concept, engine-level.
 
 export function prestigeGain(lifetimeWinnings: number): number {
-  // Standard prestige curve: sqrt-ish, threshold gating.
   if (lifetimeWinnings < 10000) return 0;
   return Math.floor(Math.sqrt(lifetimeWinnings / 10000));
 }
 
 export function prestigeMultiplier(points: number): number {
-  return 1 + points * 0.25; // each HRP gives +25% winnings
+  return 1 + points * 0.25;
 }

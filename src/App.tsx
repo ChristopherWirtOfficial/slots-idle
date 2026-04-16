@@ -13,6 +13,7 @@ import { useAutospin } from './hooks/useAutospin';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
 import { useAnimationTick } from './hooks/useAnimationTick';
 import { useMasterVolume } from './hooks/useMasterVolume';
+import { useReelSync } from './hooks/useReelSync';
 import { VolumeControl } from './components/VolumeControl';
 
 import {
@@ -22,10 +23,10 @@ import {
   spinsTotalAtom,
   totalEverWonAtom,
 } from './state/economy';
+import { levelsAtom } from './state/levels';
 import {
   betAtom,
   costsAtom,
-  levelsAtom,
   passiveAmountAtom,
   passiveRateMsAtom,
 } from './state/upgrades';
@@ -194,6 +195,10 @@ export function App() {
 
   // Syncs volume/mute atoms into the audio engine's master gain.
   useMasterVolume();
+
+  // Keep reel windows in sync with the current topology (reelCount × rowCount).
+  // Fills initial windows on mount and handles topology changes from upgrades.
+  useReelSync();
 
   const chips = useAtomValue(chipsAtom);
   const lifetimeWinnings = useAtomValue(lifetimeWinningsAtom);

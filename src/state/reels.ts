@@ -1,7 +1,10 @@
 import { atom } from 'jotai';
-import { SlotSymbol, SYMBOLS } from '../game/symbols';
+import { atomFamily } from 'jotai/utils';
+import { SlotSymbol } from '../engine/types';
+import { reelCountAtom } from './machine';
 
-export type SymWindow = [SlotSymbol, SlotSymbol, SlotSymbol];
+/** A column window — length equals the current machine's rowCount. */
+export type SymWindow = SlotSymbol[];
 
 export type ReelAnimState =
   | { kind: 'resting'; window: SymWindow }
@@ -11,29 +14,38 @@ export type ReelAnimState =
       duration: number;
       distanceCells: number;
       resultWindow: SymWindow;
-      strip: SlotSymbol[]; // strip[0..2] = prev window, strip[distanceCells..+2] = result
+      strip: SlotSymbol[];
     };
 
-const initialWindow = (): SymWindow => [
-  SYMBOLS[0],
-  SYMBOLS[1],
-  SYMBOLS[2],
-];
-
-const restingOn = (w: SymWindow): ReelAnimState => ({ kind: 'resting', window: w });
-
-export const reel0Atom = atom<ReelAnimState>(restingOn(initialWindow()));
-export const reel1Atom = atom<ReelAnimState>(restingOn(initialWindow()));
-export const reel2Atom = atom<ReelAnimState>(restingOn(initialWindow()));
-
-export const reelAtoms = [reel0Atom, reel1Atom, reel2Atom] as const;
-
-/** Frame time bumped by the animation tick; only SpinningReel subscribes. */
-export const frameTimeAtom = atom(0);
-
-export const anyReelSpinningAtom = atom((get) =>
-  reelAtoms.some((a) => get(a).kind === 'spinning'),
+/**
+ * One atom per reel index. The factory can't read other atoms at creation
+ * time, so initial state is `resting` with an empty window. An init effect
+ * (useReelSync) populates each reel with default symbols on App mount and
+ * whenever topology changes.
+ *
+ * Family entries persist across topology shrinks (orphaned atoms remain
+ * cached but unused). Acceptable — prestige/reset are rare events.
+ */
+export const reelStateAtomFamily = atomFamily((_reelIdx: number) =>
+  atom<ReelAnimState>({ kind: 'resting', window: [] }),
 );
+
+/**
+ * Array of the currently-active reel atoms, length = reelCount.
+ * Rebuilt whenever reelCount changes.
+ */
+export const reelAtomsAtom = atom((get) => {
+  const count = get(reelCountAtom);
+  return Array.from({ length: count }, (_, i) => reelStateAtomFamily(i));
+});
+
+export const anyReelSpinningAtom = atom((get) => {
+  const atoms = get(reelAtomsAtom);
+  return atoms.some((a) => get(a).kind === 'spinning');
+});
+
+/** Frame time bumped by the animation tick. Only SpinningReel subscribes. */
+export const frameTimeAtom = atom(0);
 
 export function getCurrentWindow(state: ReelAnimState): SymWindow {
   return state.kind === 'resting' ? state.window : state.resultWindow;

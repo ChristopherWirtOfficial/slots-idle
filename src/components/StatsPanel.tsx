@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
 import { theme } from '../theme';
-import { prestigeMultiplier } from '../game/upgrades';
+import { prestigeMultiplier } from '../engine/upgrades';
 
 const Panel = styled.aside`
   background: linear-gradient(180deg, ${theme.color.velvet}, ${theme.color.bgDeep});
