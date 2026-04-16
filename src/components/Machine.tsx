@@ -180,6 +180,17 @@ const Controls = styled.div`
   padding: 0 4px;
 `;
 
+const WinSummary = styled.div`
+  margin-top: 8px;
+  text-align: center;
+  font-family: ${theme.font.body};
+  font-size: 12px;
+  color: ${theme.color.ivoryDim};
+  /* Reserve space so the layout doesn't shift when a win appears/disappears. */
+  min-height: 18px;
+  line-height: 1.5;
+`;
+
 const Readout = styled.div<{ align: 'left' | 'right' }>`
   text-align: ${(p) => p.align};
 `;
@@ -418,40 +429,33 @@ export function Machine({
         </Readout>
       </Controls>
 
-      {lastResult && !spinning && lastResult.totalPayout > 0 && (
-        <div
-          css={css`
-            margin-top: 8px;
-            text-align: center;
-            font-family: ${theme.font.body};
-            font-size: 12px;
-            color: ${theme.color.ivoryDim};
-            min-height: 16px;
-          `}
-        >
-          {activeWin && activePayline ? (
-            <>
-              <span style={{ color: activeWin.symbol.color, fontWeight: 700 }}>
-                {activeWin.symbol.glyph}
-              </span>{' '}
-              <span style={{ color: theme.color.ivory }}>{activePayline.name}</span>{' '}
-              · +{activeWin.payout.toLocaleString()}
-              {winCount > 1 && (
-                <span
-                  css={css`color: ${theme.color.ivoryDim}; margin-left: 8px;`}
-                >
-                  ({(activeWinIdx ?? 0) + 1}/{winCount})
-                </span>
-              )}
-            </>
-          ) : (
-            <>
-              {winCount} line{winCount === 1 ? '' : 's'} · last paid{' '}
-              {lastResult.totalPayout.toLocaleString()}
-            </>
-          )}
-        </div>
-      )}
+      <WinSummary>
+        {lastResult && !spinning && lastResult.totalPayout > 0 && (
+          <>
+            {activeWin && activePayline ? (
+              <>
+                <span style={{ color: activeWin.symbol.color, fontWeight: 700 }}>
+                  {activeWin.symbol.glyph}
+                </span>{' '}
+                <span style={{ color: theme.color.ivory }}>{activePayline.name}</span>{' '}
+                · +{activeWin.payout.toLocaleString()}
+                {winCount > 1 && (
+                  <span
+                    css={css`color: ${theme.color.ivoryDim}; margin-left: 8px;`}
+                  >
+                    ({(activeWinIdx ?? 0) + 1}/{winCount})
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                {winCount} line{winCount === 1 ? '' : 's'} · last paid{' '}
+                {lastResult.totalPayout.toLocaleString()}
+              </>
+            )}
+          </>
+        )}
+      </WinSummary>
     </Card>
   );
 }
