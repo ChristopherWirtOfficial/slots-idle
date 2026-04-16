@@ -1,10 +1,11 @@
 import { atom } from 'jotai';
-import { SYMBOLS, SlotSymbol } from '../game/symbols';
 import { SpinResult } from '../game/spin';
 
-export const isSpinningAtom = atom(false);
-
-export const reelsDisplayAtom = atom<SlotSymbol[]>([SYMBOLS[0], SYMBOLS[1], SYMBOLS[2]]);
+/**
+ * Result of a spin whose reels are currently animating. Committed to the
+ * economy when the last reel lands; cleared after commit.
+ */
+export const pendingResultAtom = atom<SpinResult | null>(null);
 
 export const lastResultAtom = atom<SpinResult | null>(null);
 

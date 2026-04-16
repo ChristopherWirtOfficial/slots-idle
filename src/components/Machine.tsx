@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { Reel } from './Reel';
 import { Sunburst } from './Sunburst';
 import { theme } from '../theme';
-import { SlotSymbol } from '../game/symbols';
 import { SpinResult } from '../game/spin';
+import { reelAtoms } from '../state/reels';
 
 const float = keyframes`
   0% { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
@@ -187,7 +187,6 @@ const SunburstBg = styled.div`
 `;
 
 interface MachineProps {
-  reels: SlotSymbol[];
   spinning: boolean;
   chips: number;
   bet: number;
@@ -198,7 +197,6 @@ interface MachineProps {
 }
 
 export function Machine({
-  reels,
   spinning,
   chips,
   bet,
@@ -229,9 +227,9 @@ export function Machine({
       <Subtitle>— Est. 1924 —</Subtitle>
 
       <ReelRow winning={justWon}>
-        <Reel symbol={reels[0]} spinning={spinning} delay={0} />
-        <Reel symbol={reels[1]} spinning={spinning} delay={100} />
-        <Reel symbol={reels[2]} spinning={spinning} delay={200} />
+        <Reel reelAtom={reelAtoms[0]} />
+        <Reel reelAtom={reelAtoms[1]} />
+        <Reel reelAtom={reelAtoms[2]} />
 
         {showFloat && (
           <FloatWrap>

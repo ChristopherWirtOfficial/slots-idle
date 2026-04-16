@@ -1,25 +1,21 @@
 /** @jsxImportSource @emotion/react */
-import { css, keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
-import { SlotSymbol } from '../game/symbols';
+import { useAtomValue } from 'jotai';
+import { CSSProperties } from 'react';
+import { PrimitiveAtom } from 'jotai';
+import { frameTimeAtom, ReelAnimState } from '../state/reels';
+import { easeOut } from '../game/animation';
 import { theme } from '../theme';
-
-const spinAnim = keyframes`
-  0% { transform: translateY(0); filter: blur(0); }
-  40% { transform: translateY(-8px); filter: blur(2px); }
-  100% { transform: translateY(0); filter: blur(0); }
-`;
+import { SlotSymbol } from '../game/symbols';
 
 const ReelFrame = styled.div`
+  --cell-h: clamp(92px, 28vw, 140px);
   position: relative;
   width: clamp(72px, 22vw, 108px);
-  height: clamp(92px, 28vw, 140px);
+  height: var(--cell-h);
   background: linear-gradient(180deg, #1a0511 0%, #2a0a1f 50%, #1a0511 100%);
   border: 2px solid ${theme.color.gold};
   border-radius: ${theme.radius.md};
-  display: flex;
-  align-items: center;
-  justify-content: center;
   box-shadow:
     inset 0 0 24px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1px ${theme.color.goldDeep},
@@ -31,14 +27,14 @@ const ReelFrame = styled.div`
     content: '';
     position: absolute;
     inset: 0;
-    background:
-      repeating-linear-gradient(
-        0deg,
-        transparent 0 4px,
-        rgba(0, 0, 0, 0.3) 4px 5px
-      );
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0 4px,
+      rgba(0, 0, 0, 0.3) 4px 5px
+    );
     pointer-events: none;
     opacity: 0.3;
+    z-index: 2;
   }
 
   &::after {
@@ -56,40 +52,88 @@ const ReelFrame = styled.div`
     );
     opacity: 0.4;
     pointer-events: none;
+    z-index: 2;
   }
 `;
 
-const Glyph = styled.div<{ color: string; spinning: boolean }>`
+const Strip = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateY(calc(var(--cells-scrolled, 0) * var(--cell-h) * -1));
+  will-change: transform;
+`;
+
+const Cell = styled.div<{ color: string; blurred: boolean }>`
+  width: 100%;
+  height: var(--cell-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ${theme.font.display};
+  font-weight: 700;
   font-size: clamp(46px, 14vw, 72px);
   line-height: 1;
   color: ${(p) => p.color};
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.6),
     0 0 12px ${(p) => p.color}66;
-  animation: ${(p) => (p.spinning ? spinAnim : 'none')} 0.3s ease-in-out infinite;
-  font-family: ${theme.font.display};
-  font-weight: 700;
-  z-index: 1;
+  filter: ${(p) => (p.blurred ? 'blur(2px)' : 'none')};
 `;
 
-interface ReelProps {
-  symbol: SlotSymbol;
-  spinning: boolean;
-  delay?: number;
+function CellView({ symbol, blurred }: { symbol: SlotSymbol; blurred: boolean }) {
+  return (
+    <Cell color={symbol.color} blurred={blurred}>
+      {symbol.glyph}
+    </Cell>
+  );
 }
 
-export function Reel({ symbol, spinning, delay = 0 }: ReelProps) {
+/**
+ * Renders an active spinning reel — reads frame time and recomputes offset
+ * each render. Split from Reel so resting reels don't subscribe to frame time.
+ */
+function SpinningReel({
+  state,
+}: {
+  state: Extract<ReelAnimState, { kind: 'spinning' }>;
+}) {
+  const frameTime = useAtomValue(frameTimeAtom);
+  const elapsed = Math.max(0, frameTime - state.startTime);
+  const t = Math.min(1, elapsed / state.duration);
+  const cellsScrolled = easeOut(t) * state.distanceCells;
+
+  // Motion blur only while moving quickly — last ~15% of spin sharpens the result.
+  const blurred = t < 0.85;
+
+  return (
+    <Strip
+      style={{ ['--cells-scrolled' as string]: cellsScrolled } as CSSProperties}
+    >
+      {state.strip.map((sym, i) => (
+        <CellView key={i} symbol={sym} blurred={blurred} />
+      ))}
+    </Strip>
+  );
+}
+
+interface ReelProps {
+  reelAtom: PrimitiveAtom<ReelAnimState>;
+}
+
+export function Reel({ reelAtom }: ReelProps) {
+  const state = useAtomValue(reelAtom);
+
   return (
     <ReelFrame>
-      <Glyph
-        color={symbol.color}
-        spinning={spinning}
-        css={css`
-          animation-delay: ${delay}ms;
-        `}
-      >
-        {symbol.glyph}
-      </Glyph>
+      {state.kind === 'resting' ? (
+        <Strip>
+          <CellView symbol={state.symbol} blurred={false} />
+        </Strip>
+      ) : (
+        <SpinningReel state={state} />
+      )}
     </ReelFrame>
   );
 }

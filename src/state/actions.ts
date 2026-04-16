@@ -1,7 +1,12 @@
 import { atom } from 'jotai';
 import { UPGRADES, costOf } from '../game/upgrades';
 import { spin } from '../game/spin';
-import { SYMBOLS } from '../game/symbols';
+import {
+  NEAR_MISS_BONUS_MS,
+  buildStrip,
+  rollDistanceCells,
+  rollDuration,
+} from '../game/animation';
 import {
   chipsAtom,
   jackpotsAtom,
@@ -9,60 +14,104 @@ import {
   spinsTotalAtom,
   totalEverWonAtom,
 } from './economy';
-import { levelsAtom, betAtom, luckAtom, autoPerTickAtom, passiveAmountAtom } from './upgrades';
-import { globalMultAtom, highRollerPointsAtom, prestigePendingAtom } from './prestige';
 import {
-  isSpinningAtom,
-  lastFloatAtom,
-  lastResultAtom,
-  reelsDisplayAtom,
-} from './session';
+  levelsAtom,
+  betAtom,
+  luckAtom,
+  autoPerTickAtom,
+  passiveAmountAtom,
+} from './upgrades';
+import { globalMultAtom, highRollerPointsAtom, prestigePendingAtom } from './prestige';
+import { lastFloatAtom, lastResultAtom, pendingResultAtom } from './session';
+import {
+  anyReelSpinningAtom,
+  frameTimeAtom,
+  getCurrentSymbol,
+  reelAtoms,
+} from './reels';
+import { SYMBOLS } from '../game/symbols';
 
-const SPIN_ANIM_MS = 600; // keeps existing behavior until we add streaming strip
+function nowMs(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
 
 /**
- * Spin action. Write-only atom. Early-returns if already spinning or broke.
- * Kicks off a brief animated spin, then commits economy + session state.
+ * Kick off a spin: deduct bet, compute result, start each reel animating.
+ * The payout is committed when the last reel lands (see animationTickAtom).
  */
 export const spinActionAtom = atom(null, (get, set) => {
-  if (get(isSpinningAtom)) return;
+  if (get(anyReelSpinningAtom)) return;
+  if (get(pendingResultAtom) !== null) return; // prior result not yet committed
+
   const bet = get(betAtom);
   if (get(chipsAtom) < bet) return;
-
-  // Teaser reels for the animation window
-  const teaser = [
-    SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-    SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-    SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-  ];
-  set(isSpinningAtom, true);
-  set(reelsDisplayAtom, teaser);
 
   const luck = get(luckAtom);
   const mult = get(globalMultAtom);
   const result = spin(bet, luck, mult);
 
-  setTimeout(() => {
-    // Re-read chips to avoid stomping concurrent writes (autospin stacking etc.)
-    const chips = get(chipsAtom);
-    const nextChips = chips - bet + result.payout;
-    const isJackpot = result.kind === 'three' && result.reels[0].id === 'seven';
+  set(chipsAtom, get(chipsAtom) - bet);
+  set(lastFloatAtom, null); // clear previous win float
 
-    set(chipsAtom, nextChips);
-    set(lifetimeWinningsAtom, get(lifetimeWinningsAtom) + result.payout);
-    set(totalEverWonAtom, get(totalEverWonAtom) + result.payout);
+  // Near-miss bonus: if reels 0 & 1 will match, stretch reel 2's duration.
+  const willNearMiss = result.reels[0].id === result.reels[1].id;
+
+  const startTime = nowMs();
+  reelAtoms.forEach((reelAtom, i) => {
+    const prev = getCurrentSymbol(get(reelAtom));
+    const nearBonus = willNearMiss && i === 2 ? NEAR_MISS_BONUS_MS : 0;
+    const duration = rollDuration(Math.random, nearBonus);
+    const distanceCells = rollDistanceCells();
+    const strip = buildStrip(prev, result.reels[i], distanceCells);
+
+    set(reelAtom, {
+      kind: 'spinning',
+      startTime,
+      duration,
+      distanceCells,
+      resultSymbol: result.reels[i],
+      strip,
+    });
+  });
+
+  set(pendingResultAtom, result);
+});
+
+/**
+ * Runs every animation tick. Advances frame time (triggers Reel re-renders),
+ * transitions spinning reels to resting when their duration elapses, and
+ * commits the pending payout once all reels have landed.
+ */
+export const animationTickAtom = atom(null, (get, set) => {
+  const t = nowMs();
+  set(frameTimeAtom, t);
+
+  // Check for landings.
+  for (const reelAtom of reelAtoms) {
+    const s = get(reelAtom);
+    if (s.kind !== 'spinning') continue;
+    if (t - s.startTime >= s.duration) {
+      set(reelAtom, { kind: 'resting', symbol: s.resultSymbol });
+    }
+  }
+
+  // All reels resting + pending result present → commit.
+  const pending = get(pendingResultAtom);
+  if (pending !== null && !get(anyReelSpinningAtom)) {
+    set(chipsAtom, get(chipsAtom) + pending.payout);
+    set(lifetimeWinningsAtom, get(lifetimeWinningsAtom) + pending.payout);
+    set(totalEverWonAtom, get(totalEverWonAtom) + pending.payout);
     const spins = get(spinsTotalAtom) + 1;
     set(spinsTotalAtom, spins);
-    set(reelsDisplayAtom, result.reels);
-    set(lastResultAtom, result);
-    if (result.payout > 0) {
-      set(lastFloatAtom, { id: spins, amount: result.payout, kind: result.kind });
-    } else {
-      set(lastFloatAtom, null);
+    set(lastResultAtom, pending);
+    if (pending.payout > 0) {
+      set(lastFloatAtom, { id: spins, amount: pending.payout, kind: pending.kind });
     }
+    const isJackpot =
+      pending.kind === 'three' && pending.reels[0].id === 'seven';
     if (isJackpot) set(jackpotsAtom, get(jackpotsAtom) + 1);
-    set(isSpinningAtom, false);
-  }, SPIN_ANIM_MS);
+    set(pendingResultAtom, null);
+  }
 });
 
 export const buyUpgradeAtom = atom(null, (get, set, id: string) => {
@@ -83,7 +132,6 @@ export const prestigeActionAtom = atom(null, (get, set) => {
   if (gain <= 0) return;
 
   set(highRollerPointsAtom, get(highRollerPointsAtom) + gain);
-  // Run-local state resets; permanent stats stay
   set(chipsAtom, 20);
   set(lifetimeWinningsAtom, 0);
   set(
@@ -92,6 +140,8 @@ export const prestigeActionAtom = atom(null, (get, set) => {
   );
   set(lastResultAtom, null);
   set(lastFloatAtom, null);
+  set(pendingResultAtom, null);
+  reelAtoms.forEach((a, i) => set(a, { kind: 'resting', symbol: SYMBOLS[i] }));
 });
 
 export const resetActionAtom = atom(null, (_get, set) => {
@@ -107,24 +157,20 @@ export const resetActionAtom = atom(null, (_get, set) => {
   );
   set(lastResultAtom, null);
   set(lastFloatAtom, null);
-  set(isSpinningAtom, false);
+  set(pendingResultAtom, null);
+  reelAtoms.forEach((a, i) => set(a, { kind: 'resting', symbol: SYMBOLS[i] }));
 });
 
-/**
- * Autospin tick: called by the tick loop at `frequency` ticks between calls.
- * Frequency comes from the speed upgrade and gates how often we fire.
- */
+// Autospin: fires spin at upgrade-derived frequency; spin action gates itself.
 export const autospinTickAtom = atom(null, (get, set) => {
   if (get(autoPerTickAtom) === 0) return;
-  if (get(isSpinningAtom)) return;
+  if (get(anyReelSpinningAtom)) return;
+  if (get(pendingResultAtom) !== null) return;
   if (get(chipsAtom) < get(betAtom)) return;
   set(spinActionAtom);
 });
 
-/**
- * Passive income tick: drip chips into the bank at upgrade-derived rate.
- * Always runs — even at 0 upgrades we get the baseline 1 chip / 5s.
- */
+// Passive income: drips chips at baseline + upgrades.
 export const passiveIncomeTickAtom = atom(null, (get, set) => {
   set(chipsAtom, get(chipsAtom) + get(passiveAmountAtom));
 });

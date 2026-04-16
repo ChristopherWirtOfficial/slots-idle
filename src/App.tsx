@@ -11,6 +11,7 @@ import { theme } from './theme';
 import { startTickLoop } from './tick/loop';
 import { useAutospin } from './hooks/useAutospin';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
+import { useAnimationTick } from './hooks/useAnimationTick';
 
 import {
   chipsAtom,
@@ -32,11 +33,10 @@ import {
   prestigePendingAtom,
 } from './state/prestige';
 import {
-  isSpinningAtom,
   lastFloatAtom,
   lastResultAtom,
-  reelsDisplayAtom,
 } from './state/session';
+import { anyReelSpinningAtom } from './state/reels';
 import {
   buyUpgradeAtom,
   prestigeActionAtom,
@@ -187,6 +187,9 @@ export function App() {
   // Passive chip income — always on, upgrade-controlled rate and amount.
   usePassiveIncome();
 
+  // Drives reel animations: frame time, landings, payout commit.
+  useAnimationTick();
+
   const chips = useAtomValue(chipsAtom);
   const lifetimeWinnings = useAtomValue(lifetimeWinningsAtom);
   const totalEverWon = useAtomValue(totalEverWonAtom);
@@ -200,8 +203,7 @@ export function App() {
   const prestigePending = useAtomValue(prestigePendingAtom);
   const passiveAmount = useAtomValue(passiveAmountAtom);
   const passiveRateMs = useAtomValue(passiveRateMsAtom);
-  const isSpinning = useAtomValue(isSpinningAtom);
-  const reels = useAtomValue(reelsDisplayAtom);
+  const isSpinning = useAtomValue(anyReelSpinningAtom);
   const lastResult = useAtomValue(lastResultAtom);
   const lastFloat = useAtomValue(lastFloatAtom);
 
@@ -245,7 +247,6 @@ export function App() {
 
           <MachineArea>
             <Machine
-              reels={reels}
               spinning={isSpinning}
               chips={chips}
               bet={bet}
