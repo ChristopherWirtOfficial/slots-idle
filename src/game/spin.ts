@@ -4,7 +4,7 @@ import { REEL_COUNT, ROW_COUNT, SlotSymbol, SYMBOLS } from './symbols';
 export interface WinLine {
   paylineId: string;
   symbol: SlotSymbol;
-  matchCount: 2 | 3;
+  matchCount: 3;
   payout: number;
 }
 
@@ -49,11 +49,6 @@ function evaluatePayline(
     const payout = Math.floor(bet * a.payout3 * globalMult);
     if (payout === 0) return null;
     return { paylineId: payline.id, symbol: a, matchCount: 3, payout };
-  }
-  if (a.id === b.id && a.payout2 > 0) {
-    const payout = Math.floor(bet * a.payout2 * globalMult);
-    if (payout === 0) return null;
-    return { paylineId: payline.id, symbol: a, matchCount: 2, payout };
   }
   return null;
 }
