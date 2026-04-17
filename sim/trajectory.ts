@@ -23,6 +23,15 @@ export type TrajectoryEvent =
       kind: 'snapshot';
       /** Cumulative chips earned since last snapshot — useful for income-rate derivation. */
       earnedSince: Decimal;
+      /**
+       * Estimated seconds until the cheapest unbought upgrade becomes
+       * affordable, given the income rate of the preceding snapshot window.
+       * Infinity if no unbought upgrades remain. 0 if already affordable.
+       * A key plateau-detection signal: small early game, grows as plateau forms.
+       */
+      etaNextUpgradeSec: number;
+      /** The upgrade ID used for the ETA calc. null if no unbought upgrades. */
+      etaUpgradeId: string | null;
     }
   | { kind: 'terminate'; reason: TerminateReason };
 

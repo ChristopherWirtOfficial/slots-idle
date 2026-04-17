@@ -53,12 +53,19 @@ function median(xs: number[]): number {
  * the way median-of-snapshots does.
  */
 export function rawSnapshotCsv(batch: BatchResult, snapshotIntervalMs: number): string {
-  const rows = ['archetype,seed,tMin,rateChipsPerMin'];
+  const rows = ['archetype,seed,tMin,rateChipsPerMin,etaNextUpgradeSec,etaUpgradeId'];
   for (const t of batch.trajectories) {
-    const snaps = snapshotRates(t, snapshotIntervalMs);
-    for (const s of snaps) {
+    const minutesPerSnap = snapshotIntervalMs / 60000;
+    for (const e of t.entries) {
+      if (e.event.kind !== 'snapshot') continue;
+      const rate = e.event.earnedSince.toNumber() / minutesPerSnap;
+      const tMin = e.simTimeMs / 60000;
+      // Cap infinity for CSV readability — use large sentinel
+      const eta = isFinite(e.event.etaNextUpgradeSec)
+        ? e.event.etaNextUpgradeSec
+        : 999999;
       rows.push(
-        `${t.archetypeId},${t.seed},${s.tMin.toFixed(2)},${s.rateChipsPerMin.toFixed(2)}`,
+        `${t.archetypeId},${t.seed},${tMin.toFixed(2)},${rate.toFixed(2)},${eta.toFixed(2)},${e.event.etaUpgradeId ?? ''}`,
       );
     }
   }

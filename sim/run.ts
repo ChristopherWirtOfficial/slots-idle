@@ -8,6 +8,7 @@ import {
   initialState,
   nextCost,
 } from './state';
+import { UPGRADES } from './gameData';
 import { rollSpinOutcome } from './outcome';
 import { RNG } from './rng';
 import {
@@ -156,25 +157,65 @@ export function runTrajectory(
   let chipsAtLastSnapshot = state.chips;
   let lifetimeAtLastSnapshot = state.lifetimeWinnings;
 
+  /**
+   * Find the cheapest upgrade that isn't maxed out yet. Ignores chips —
+   * this is about "what's the next decision even if we can't afford it."
+   * Returns null if everything is maxed.
+   */
+  const cheapestUnboughtUpgrade = (s: SimState): string | null => {
+    let best: { id: string; cost: ReturnType<typeof nextCost> } | null = null;
+    for (const u of UPGRADES) {
+      const lvl = s.levels[u.id] ?? 0;
+      if (lvl >= u.maxLevel) continue;
+      const cost = nextCost(s, u.id);
+      if (best === null || cost.lt(best.cost)) {
+        best = { id: u.id, cost };
+      }
+    }
+    return best?.id ?? null;
+  };
+
   const emitSnapshotsUpTo = (targetMs: number) => {
     while (nextSnapshotAtMs <= targetMs) {
-      // Snap time is exactly the boundary — we've accrued passive up to
-      // state.simTimeMs elsewhere, but a snapshot can land mid-interval.
-      // We anchor the snapshot at the boundary time regardless.
       const earnedSince = state.lifetimeWinnings.sub(lifetimeAtLastSnapshot);
+      // Income rate in chips/sec over this snapshot window.
+      const windowSec = config.snapshotIntervalMs / 1000;
+      const incomePerSec = earnedSince.toNumber() / windowSec;
+
+      // ETA: cheapest unbought upgrade / income rate.
+      //  - If chips already cover it: 0.
+      //  - If income rate is 0: Infinity.
+      //  - Otherwise: (cost - chips) / incomePerSec
+      let etaUpgradeId: string | null = cheapestUnboughtUpgrade(state);
+      let etaNextUpgradeSec = Infinity;
+      if (etaUpgradeId !== null) {
+        const cost = nextCost(state, etaUpgradeId);
+        if (state.chips.gte(cost)) {
+          etaNextUpgradeSec = 0;
+        } else if (incomePerSec > 0) {
+          const deficit = cost.sub(state.chips).toNumber();
+          etaNextUpgradeSec = deficit / incomePerSec;
+        }
+      }
+
       recorder.record({
         simTimeMs: nextSnapshotAtMs,
         spinCount: state.spinCount,
         chips: state.chips,
         lifetimeWinnings: state.lifetimeWinnings,
         levels: { ...state.levels },
-        event: { kind: 'snapshot', earnedSince },
+        event: {
+          kind: 'snapshot',
+          earnedSince,
+          etaNextUpgradeSec,
+          etaUpgradeId,
+        },
       });
       chipsAtLastSnapshot = state.chips;
       lifetimeAtLastSnapshot = state.lifetimeWinnings;
       nextSnapshotAtMs += config.snapshotIntervalMs;
     }
-    void chipsAtLastSnapshot; // kept for future per-snapshot chip-delta if needed
+    void chipsAtLastSnapshot;
   };
 
   // --- Player pacing between spins ---
