@@ -12,11 +12,12 @@ import { jackpotsAtom } from '../../state/economy';
 import { ensureAudio } from '../../audio/engine';
 import { FloatingWin } from './FloatingWin';
 import { AutoSpinToggle } from './AutoSpinToggle';
+import { CreditBar } from './CreditBar';
 import { MachineCabinet } from './MachineCabinet';
 import { MachineHeader } from './MachineHeader';
 import { PaylineOverlay } from './PaylineOverlay';
+import { PullButton } from './PullButton';
 import { ReelGrid } from './ReelGrid';
-import { SpinControls } from './SpinControls';
 import { WinSummary } from './WinSummary';
 import { useCellCenters } from './useCellCenters';
 import { useWinCycle } from './useWinCycle';
@@ -27,7 +28,7 @@ const BIG_WIN_BET_MULTIPLIER = 10;
 
 interface MachineProps {
   spinning: boolean;
-  chips: number;
+  /** Used to compute the big-win threshold for the floating toast. */
   bet: number;
   canSpin: boolean;
   onSpin: () => void;
@@ -37,7 +38,6 @@ interface MachineProps {
 
 export function Machine({
   spinning,
-  chips,
   bet,
   canSpin,
   onSpin,
@@ -96,6 +96,8 @@ export function Machine({
         paylineCount={config.paylines.length}
       />
 
+      <CreditBar />
+
       <ReelGrid ref={gridRef} justWon={justWon}>
         {Array.from({ length: reelCount }, (_, i) => (
           <Reel key={i} reelIdx={i} />
@@ -116,13 +118,7 @@ export function Machine({
         )}
       </ReelGrid>
 
-      <SpinControls
-        bet={bet}
-        chips={chips}
-        canSpin={canSpin}
-        spinning={spinning}
-        onSpin={handlePull}
-      />
+      <PullButton canSpin={canSpin} spinning={spinning} onSpin={handlePull} />
 
       <AutoSpinToggle />
 

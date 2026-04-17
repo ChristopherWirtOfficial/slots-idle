@@ -3,35 +3,10 @@ import styled from '@emotion/styled';
 import { theme } from '../../theme';
 
 const Row = styled.div`
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: clamp(10px, 2.5vw, 18px);
+  display: flex;
+  justify-content: center;
   margin-top: clamp(12px, 2.5vw, 18px);
   padding: 0 4px;
-`;
-
-const Cell = styled.div<{ align: 'left' | 'right' }>`
-  text-align: ${(p) => p.align};
-`;
-
-const Label = styled.div`
-  font-family: ${theme.font.script};
-  font-size: 10px;
-  letter-spacing: 0.3em;
-  color: ${theme.color.ivoryDim};
-  text-transform: uppercase;
-  margin-bottom: 2px;
-`;
-
-const Value = styled.div<{ emphasis?: boolean }>`
-  font-family: ${theme.font.display};
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  font-style: italic;
-  font-size: ${(p) => (p.emphasis ? 'clamp(22px, 5.5vw, 28px)' : 'clamp(16px, 4vw, 20px)')};
-  color: ${theme.color.gold};
-  line-height: 1;
 `;
 
 const Button = styled.button<{ inactive: boolean }>`
@@ -68,11 +43,11 @@ const Button = styled.button<{ inactive: boolean }>`
 `;
 
 /**
- * Hidden sizer: always carries the widest label text so the button's
- * natural width is stable regardless of which label is actually shown.
- * Without this the button grows/shrinks as "Pull" flips to "••• SPIN •••",
- * which propagates as a horizontal shift through the 1fr grid columns on
- * either side. aria-hidden because screen readers read the live ButtonLabel.
+ * Hidden sizer. Always carries the widest label so the button's natural
+ * width doesn't change as the label flips between "Pull" and the
+ * spinning state. Less critical now that the button is alone in its
+ * row (no sibling elements to push around), but the button still
+ * shifts horizontally as it re-centers without this — visually jarring.
  */
 const ButtonSizer = styled.span`
   visibility: hidden;
@@ -89,38 +64,20 @@ const ButtonLabel = styled.span`
 
 const SPINNING_LABEL = '••• SPIN •••';
 
-interface SpinControlsProps {
-  bet: number;
-  chips: number;
+interface PullButtonProps {
   canSpin: boolean;
   spinning: boolean;
   onSpin: () => void;
 }
 
-/** Wager readout, pull button, and chip balance in a single row. */
-export function SpinControls({
-  bet,
-  chips,
-  canSpin,
-  spinning,
-  onSpin,
-}: SpinControlsProps) {
+/** The pull lever. Alone in its row so nothing else shifts with its width. */
+export function PullButton({ canSpin, spinning, onSpin }: PullButtonProps) {
   return (
     <Row>
-      <Cell align="left">
-        <Label>Wager</Label>
-        <Value>{bet.toLocaleString()}</Value>
-      </Cell>
-
       <Button disabled={!canSpin} inactive={!canSpin} onClick={onSpin}>
         <ButtonSizer aria-hidden>{SPINNING_LABEL}</ButtonSizer>
         <ButtonLabel>{spinning ? SPINNING_LABEL : 'Pull'}</ButtonLabel>
       </Button>
-
-      <Cell align="right">
-        <Label>Chips</Label>
-        <Value emphasis>{chips.toLocaleString()}</Value>
-      </Cell>
     </Row>
   );
 }

@@ -261,7 +261,6 @@ export function App() {
           <MachineArea>
             <Machine
               spinning={isSpinning}
-              chips={chips}
               bet={bet}
               canSpin={canSpin}
               onSpin={doSpin}
