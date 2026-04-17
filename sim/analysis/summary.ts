@@ -13,6 +13,21 @@ function mean(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0) / xs.length;
 }
 
+export interface TierStats {
+  /** Band label, e.g. "<100", "100-300", ...  */
+  label: string;
+  /** Cost upper bound (inclusive). */
+  upper: number;
+  /** Time (min) to first purchase in this tier, per run — never-bought runs excluded. */
+  firstBuyMin: Stats;
+  /** Time (min) to last purchase in this tier, per run — never-bought runs excluded. */
+  lastBuyMin: Stats;
+  /** Number of purchases in this tier, per run. */
+  purchaseCount: Stats;
+  /** Runs that never made any purchase in this tier. */
+  neverEnteredCount: number;
+}
+
 export interface ArchetypeSummary {
   archetypeId: string;
   nRuns: number;
@@ -30,6 +45,8 @@ export interface ArchetypeSummary {
   /** Per-upgrade: first-purchase sim-minutes (same dataset). */
   firstPurchaseMin: Record<string, Stats>;
   firstPurchaseNeverCount: Record<string, number>;
+  /** Cost-tier banded metrics — early/mid/late game cadence readouts. */
+  tiers: TierStats[];
 }
 
 export interface Stats {
@@ -53,6 +70,47 @@ function statsOf(xs: number[]): Stats {
     min: sorted.length ? sorted[0] : NaN,
     max: sorted.length ? sorted[sorted.length - 1] : NaN,
   };
+}
+
+/**
+ * Cost-tier upper bounds. Non-uniform deliberately — early tiers tight,
+ * mid/late tiers wider. Tune based on how densely populated they are.
+ */
+const TIER_UPPERS = [100, 300, 700, 1200, 2000, 4000, 7500, 15000, 40000, 150000, Infinity];
+
+function tierLabelFor(upper: number, prevUpper: number): string {
+  if (upper === Infinity) return `>${prevUpper}`;
+  if (prevUpper === 0) return `<${upper}`;
+  return `${prevUpper}-${upper}`;
+}
+
+/**
+ * For one trajectory: bucket each 'buy' event by cost tier; compute
+ * per-tier first-buy-minute, last-buy-minute, count.
+ */
+function tierPerRun(t: Trajectory) {
+  const byTier: {
+    firsts: (number | null)[];
+    lasts: (number | null)[];
+    counts: number[];
+  } = {
+    firsts: TIER_UPPERS.map(() => null),
+    lasts: TIER_UPPERS.map(() => null),
+    counts: TIER_UPPERS.map(() => 0),
+  };
+
+  for (const e of t.entries) {
+    if (e.event.kind !== 'buy') continue;
+    const cost = e.event.cost.toNumber();
+    const tierIdx = TIER_UPPERS.findIndex((u) => cost < u);
+    if (tierIdx < 0) continue;
+    const mins = e.simTimeMs / 60000;
+    if (byTier.firsts[tierIdx] === null) byTier.firsts[tierIdx] = mins;
+    byTier.lasts[tierIdx] = mins;
+    byTier.counts[tierIdx]++;
+  }
+
+  return byTier;
 }
 
 function interPurchaseSpans(t: Trajectory): { spins: number[]; simMin: number[] } {
@@ -109,6 +167,12 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
     const firstMinByUpgrade: Record<string, number[]> = {};
     const neverPurchased: Record<string, number> = {};
 
+    // Per-tier accumulators — one array-of-arrays per tier
+    const tierFirsts: number[][] = TIER_UPPERS.map(() => []);
+    const tierLasts: number[][] = TIER_UPPERS.map(() => []);
+    const tierCounts: number[][] = TIER_UPPERS.map(() => []);
+    const tierNeverEntered: number[] = TIER_UPPERS.map(() => 0);
+
     // Gather all upgrade IDs we see across runs
     const knownUpgrades = new Set<string>();
     for (const t of runs) {
@@ -148,6 +212,15 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
           neverPurchased[id] = (neverPurchased[id] ?? 0) + 1;
         }
       }
+
+      // Per-tier accumulation for this run
+      const tiers = tierPerRun(t);
+      for (let i = 0; i < TIER_UPPERS.length; i++) {
+        if (tiers.firsts[i] !== null) tierFirsts[i].push(tiers.firsts[i]!);
+        if (tiers.lasts[i] !== null) tierLasts[i].push(tiers.lasts[i]!);
+        if (tiers.counts[i] > 0) tierCounts[i].push(tiers.counts[i]);
+        else tierNeverEntered[i]++;
+      }
     }
 
     const finalLevelsStats: Record<string, Stats> = {};
@@ -164,6 +237,18 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
       firstMinStats[id] = statsOf(xs);
     }
 
+    const tiers: TierStats[] = TIER_UPPERS.map((upper, i) => {
+      const prev = i === 0 ? 0 : TIER_UPPERS[i - 1];
+      return {
+        label: tierLabelFor(upper, prev),
+        upper,
+        firstBuyMin: statsOf(tierFirsts[i]),
+        lastBuyMin: statsOf(tierLasts[i]),
+        purchaseCount: statsOf(tierCounts[i]),
+        neverEnteredCount: tierNeverEntered[i],
+      };
+    });
+
     summaries.push({
       archetypeId,
       nRuns: runs.length,
@@ -177,6 +262,7 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
       firstPurchaseSpin: firstSpinStats,
       firstPurchaseMin: firstMinStats,
       firstPurchaseNeverCount: neverPurchased,
+      tiers,
     });
   }
 
@@ -255,6 +341,18 @@ export function printSummary(summaries: ArchetypeSummary[]): string {
     for (const [id, st] of Object.entries(s.finalLevels)) {
       lines.push(
         `    ${id.padEnd(16)} ${String(st.median).padStart(3)}  [${st.p5}..${st.p95}]`,
+      );
+    }
+    lines.push('  spending tiers (first buy / last buy / count / never-entered):');
+    for (const t of s.tiers) {
+      // Skip tiers nobody entered (reduces noise for high tiers in short runs)
+      if (t.firstBuyMin.n === 0) continue;
+      const first = fmtMin(t.firstBuyMin.median);
+      const last = fmtMin(t.lastBuyMin.median);
+      const count = t.purchaseCount.median;
+      const lab = t.label.padEnd(10);
+      lines.push(
+        `    ${lab} first=${first}  last=${last}  count=${count}  never=${t.neverEnteredCount}`,
       );
     }
   }

@@ -19,6 +19,11 @@ export type TrajectoryEvent =
   | { kind: 'buy'; upgradeId: string; cost: Decimal; newLevel: number }
   | { kind: 'passive'; amount: number }
   | { kind: 'idle_start'; untilMs: number }
+  | {
+      kind: 'snapshot';
+      /** Cumulative chips earned since last snapshot — useful for income-rate derivation. */
+      earnedSince: Decimal;
+    }
   | { kind: 'terminate'; reason: TerminateReason };
 
 export type TerminateReason =

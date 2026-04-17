@@ -18,20 +18,24 @@ import {
 } from './trajectory';
 
 export interface RunConfig {
-  maxSpins: number;
-  /** Hard cap on simulated time, as a safety net against runaway sims. */
+  /** Primary termination: stop after this much simulated time has elapsed. */
   maxSimTimeMs: number;
+  /** Safety cap on spin count to prevent runaway sims. */
+  maxSpins: number;
   /**
    * If chips < bet AND no affordable upgrade AND passive income is
    * either 0 or won't close the gap in `softlockWaitMs`, terminate.
    */
   softlockWaitMs: number;
+  /** Emit a snapshot trajectory entry every N simulated ms. */
+  snapshotIntervalMs: number;
 }
 
 export const DEFAULT_CONFIG: RunConfig = {
-  maxSpins: 2000,
-  maxSimTimeMs: 1000 * 60 * 60 * 8, // 8 sim hours
-  softlockWaitMs: 1000 * 60 * 10,   // 10 minutes
+  maxSimTimeMs: 1000 * 60 * 60 * 4, // 4 sim hours
+  maxSpins: 100_000,                // safety cap only
+  softlockWaitMs: 1000 * 60 * 10,
+  snapshotIntervalMs: 30_000,       // every 30s
 };
 
 export function runTrajectory(
@@ -144,6 +148,35 @@ export function runTrajectory(
     });
   };
 
+  // --- Snapshot emitter ---
+  // Periodic state samples for later income-rate / plateau analysis.
+  // `chipsAtLastSnapshot` lets each snapshot report chips earned during
+  // its interval (the derivative of the curve, cheap to aggregate later).
+  let nextSnapshotAtMs = config.snapshotIntervalMs;
+  let chipsAtLastSnapshot = state.chips;
+  let lifetimeAtLastSnapshot = state.lifetimeWinnings;
+
+  const emitSnapshotsUpTo = (targetMs: number) => {
+    while (nextSnapshotAtMs <= targetMs) {
+      // Snap time is exactly the boundary — we've accrued passive up to
+      // state.simTimeMs elsewhere, but a snapshot can land mid-interval.
+      // We anchor the snapshot at the boundary time regardless.
+      const earnedSince = state.lifetimeWinnings.sub(lifetimeAtLastSnapshot);
+      recorder.record({
+        simTimeMs: nextSnapshotAtMs,
+        spinCount: state.spinCount,
+        chips: state.chips,
+        lifetimeWinnings: state.lifetimeWinnings,
+        levels: { ...state.levels },
+        event: { kind: 'snapshot', earnedSince },
+      });
+      chipsAtLastSnapshot = state.chips;
+      lifetimeAtLastSnapshot = state.lifetimeWinnings;
+      nextSnapshotAtMs += config.snapshotIntervalMs;
+    }
+    void chipsAtLastSnapshot; // kept for future per-snapshot chip-delta if needed
+  };
+
   // --- Player pacing between spins ---
   // After a spin commits, the player waits some amount of time before
   // the next spin: autospin delay if they're using autospin and it's
@@ -198,6 +231,7 @@ export function runTrajectory(
       const targetMs = state.simTimeMs + waitMs;
       accruePassive(state, derived, targetMs);
       state.simTimeMs = targetMs;
+      emitSnapshotsUpTo(state.simTimeMs);
       if (state.simTimeMs >= config.maxSimTimeMs) {
         terminateReason = 'max_time';
         break;
@@ -213,6 +247,7 @@ export function runTrajectory(
 
     // Spin!
     doSpin(state);
+    emitSnapshotsUpTo(state.simTimeMs);
 
     // Exit conditions
     if (state.spinCount >= config.maxSpins) {
