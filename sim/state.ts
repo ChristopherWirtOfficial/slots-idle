@@ -69,7 +69,7 @@ export function derive(state: SimState): DerivedValues {
     bet: getUpgrade('bet').effect(lvl('bet')),
     luck: getUpgrade('luck').effect(lvl('luck')),
     multiplier: new Decimal(getUpgrade('multiplier').effect(lvl('multiplier'))),
-    passiveAmount: lvl('passiveAmount') === 0 ? 0 : getUpgrade('passiveAmount').effect(lvl('passiveAmount')),
+    passiveAmount: getUpgrade('passiveAmount').effect(lvl('passiveAmount')),
     passiveRateMs: getUpgrade('passiveRate').effect(lvl('passiveRate')),
     autospinDelayMs: getUpgrade('autospin').effect(lvl('autospin')),
     autospinUnlocked: lvl('autospin') > 0,

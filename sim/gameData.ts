@@ -86,7 +86,7 @@ export const UPGRADES: SimUpgrade[] = [
   { id: 'extraRow',       baseCost: 25000, costMult: 5,   maxLevel: 1,  effect: (l) => 3 + l,                                 role: 'topology' },
 ];
 
-export const STARTING_CHIPS = 20;
+export const STARTING_CHIPS = 30;
 export const BASE_REEL_COUNT = 3;
 export const BASE_ROW_COUNT = 3;
 

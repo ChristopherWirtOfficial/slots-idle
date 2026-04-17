@@ -12,7 +12,7 @@ import { highRollerPointsAtom, prestigePendingAtom } from '../prestige';
 import { lastFloatAtom, lastResultAtom, pendingResultAtom } from '../session';
 import { reelAtomsAtom } from '../reels';
 
-const STARTING_CHIPS = () => new Decimal(20);
+const STARTING_CHIPS = () => new Decimal(30);
 const ZERO = () => new Decimal(0);
 
 /** Cash in prestige: gain HRP, wipe run-local state. Reels re-sync. */

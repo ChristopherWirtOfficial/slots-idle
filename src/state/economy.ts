@@ -7,7 +7,7 @@ const KEY = (k: string) => `lucky-idle-slots:v1:${k}`;
 
 // Money and accumulated-payout atoms are Decimal. They grow without
 // bound as the player compounds upgrades + prestige.
-export const chipsAtom = atomWithStorage<Decimal>(KEY('chips'), new Decimal(20), decimalStorage);
+export const chipsAtom = atomWithStorage<Decimal>(KEY('chips'), new Decimal(30), decimalStorage);
 export const lifetimeWinningsAtom = atomWithStorage<Decimal>(
   KEY('lifetimeWinnings'),
   new Decimal(0),
