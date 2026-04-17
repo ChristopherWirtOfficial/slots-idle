@@ -1,8 +1,10 @@
 /** @jsxImportSource @emotion/react */
 import { useAtomValue } from 'jotai';
+import Decimal from 'break_infinity.js';
 import { useEffect, useRef, useState } from 'react';
 import { Reel } from '../Reel';
 import { SpinResult } from '../../engine/types';
+import { FloatEvent } from '../../state/session';
 import {
   activeMachineAtom,
   reelCountAtom,
@@ -32,7 +34,7 @@ interface MachineProps {
   bet: number;
   canSpin: boolean;
   onSpin: () => void;
-  lastFloat: { id: number; amount: number; isJackpot: boolean } | null;
+  lastFloat: FloatEvent | null;
   lastResult: SpinResult | null;
 }
 
@@ -80,12 +82,14 @@ export function Machine({
     return () => window.clearTimeout(t);
   }, [lastFloat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const justWon = Boolean(lastResult && lastResult.totalPayout > 0 && !spinning);
+  const justWon = Boolean(lastResult && lastResult.totalPayout.gt(0) && !spinning);
 
   const handlePull = () => {
     ensureAudio();
     onSpin();
   };
+
+  const bigThreshold = new Decimal(bet * BIG_WIN_BET_MULTIPLIER);
 
   return (
     <MachineCabinet shaking={shaking}>
@@ -113,7 +117,7 @@ export function Machine({
           <FloatingWin
             amount={visibleFloat.amount}
             isJackpot={visibleFloat.isJackpot}
-            bigThreshold={bet * BIG_WIN_BET_MULTIPLIER}
+            bigThreshold={bigThreshold}
           />
         )}
       </ReelGrid>

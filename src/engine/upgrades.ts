@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { UpgradeDef } from './types';
 
 /**
@@ -75,18 +76,26 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
   },
 ];
 
-/** Cost of the nth purchase of an upgrade (level = current, cost is for next). */
-export function costOf(u: UpgradeDef, currentLevel: number): number {
-  return Math.ceil(u.baseCost * Math.pow(u.costMult, currentLevel));
+/**
+ * Cost of the nth purchase of an upgrade (level = current, cost is for next).
+ * Returns Decimal: with costMult values like 1.9 and deep upgrade levels,
+ * costs easily exceed Number.MAX_SAFE_INTEGER (1.9^50 ≈ 1e14, 1.9^100 ≈ 1e26).
+ */
+export function costOf(u: UpgradeDef, currentLevel: number): Decimal {
+  return Decimal.mul(u.baseCost, Decimal.pow(u.costMult, currentLevel)).ceil();
 }
 
-// Prestige helpers — global concept, engine-level.
-
-export function prestigeGain(lifetimeWinnings: number): number {
-  if (lifetimeWinnings < 10000) return 0;
-  return Math.floor(Math.sqrt(lifetimeWinnings / 10000));
+/**
+ * HRP granted at prestige time. Decimal because lifetimeWinnings grows
+ * unbounded, so sqrt(lifetimeWinnings / 10000) can go well past number range.
+ * Floor'd to the nearest whole HRP.
+ */
+export function prestigeGain(lifetimeWinnings: Decimal): Decimal {
+  if (lifetimeWinnings.lt(10000)) return new Decimal(0);
+  return lifetimeWinnings.div(10000).sqrt().floor();
 }
 
-export function prestigeMultiplier(points: number): number {
-  return 1 + points * 0.25;
+/** Permanent payout multiplier derived from HRP. Each point is +25%. */
+export function prestigeMultiplier(points: Decimal): Decimal {
+  return points.mul(0.25).add(1);
 }

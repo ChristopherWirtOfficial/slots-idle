@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { MachineWin, ResolvedMachineConfig, SlotSymbol } from '../../engine/types';
 import { paylineNameById } from './paylines';
 
@@ -13,7 +14,7 @@ export function evaluate(ctx: {
   grid: SlotSymbol[][];
   config: ResolvedMachineConfig;
   bet: number;
-  globalMult: number;
+  globalMult: Decimal;
 }): MachineWin[] {
   const { grid, config, bet, globalMult } = ctx;
   const wins: MachineWin[] = [];
@@ -34,8 +35,10 @@ export function evaluate(ctx: {
     const multiplier = first.payouts[matchCount];
     if (multiplier === undefined || multiplier === 0) continue;
 
-    const payout = Math.floor(bet * multiplier * globalMult);
-    if (payout === 0) continue;
+    // bet × symbolMult is small-bounded (max ~51 × 1800 = 91,800) — stay number
+    // here, then apply globalMult which is the unbounded term.
+    const payout = globalMult.mul(bet * multiplier).floor();
+    if (payout.lte(0)) continue;
 
     const isJackpot = first.id === 'seven' && matchCount === lineSyms.length;
 

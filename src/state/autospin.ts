@@ -61,6 +61,6 @@ export const autospinWaitingAtom = atom((get) => {
   if (!get(autospinEffectiveAtom)) return false;
   if (get(anyReelSpinningAtom)) return false;
   if (get(pendingResultAtom) !== null) return false;
-  if (get(chipsAtom) < get(betAtom)) return false;
+  if (get(chipsAtom).lt(get(betAtom))) return false;
   return true;
 });

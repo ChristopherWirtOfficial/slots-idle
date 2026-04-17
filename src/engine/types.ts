@@ -1,6 +1,8 @@
 // Engine-level types. Machine-agnostic.
 // Machine-specific concepts (paylines, clusters, scatters) live in machines/.
 
+import Decimal from 'break_infinity.js';
+
 export interface SlotSymbol {
   id: string;
   glyph: string;
@@ -43,7 +45,7 @@ export interface MachineWin {
   /** Which symbol caused the win — drives glyph/color in UI. */
   symbol: SlotSymbol;
   /** Already-computed payout in chips (bet × symbol mult × globalMult). */
-  payout: number;
+  payout: Decimal;
   /** Jackpot-tier? Triggers cabinet shake + jackpot SFX. */
   isJackpot: boolean;
   /** Machine-specific opaque metadata. */
@@ -133,7 +135,7 @@ export interface Machine {
     grid: SlotSymbol[][];
     config: ResolvedMachineConfig;
     bet: number;
-    globalMult: number;
+    globalMult: Decimal;
   }): MachineWin[];
 
   /** How should the UI highlight this win on the current config's grid? */
@@ -157,6 +159,6 @@ export interface Machine {
 export interface SpinResult {
   grid: SlotSymbol[][];
   wins: MachineWin[];
-  totalPayout: number;
+  totalPayout: Decimal;
   hasJackpot: boolean;
 }

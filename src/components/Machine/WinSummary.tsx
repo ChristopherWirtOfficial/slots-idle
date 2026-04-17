@@ -2,6 +2,7 @@
 import styled from '@emotion/styled';
 import { MachineWin } from '../../engine/types';
 import { theme } from '../../theme';
+import { formatNum } from '../../util/format';
 
 const Row = styled.div`
   margin-top: 8px;
@@ -44,7 +45,7 @@ export function WinSummary({ activeWin, winCount, activeIdx }: WinSummaryProps) 
   return (
     <Row>
       <Glyph color={activeWin.symbol.color}>{activeWin.symbol.glyph}</Glyph>{' '}
-      <WinName>{activeWin.name}</WinName> · +{activeWin.payout.toLocaleString()}
+      <WinName>{activeWin.name}</WinName> · +{formatNum(activeWin.payout)}
       {winCount > 1 && (
         <Counter>
           ({(activeIdx ?? 0) + 1}/{winCount})

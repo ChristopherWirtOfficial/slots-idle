@@ -4,6 +4,7 @@ import { useAtomValue } from 'jotai';
 import { chipsAtom } from '../../state/economy';
 import { betAtom } from '../../state/upgrades';
 import { theme } from '../../theme';
+import { formatNum } from '../../util/format';
 
 const Bar = styled.div`
   display: flex;
@@ -67,11 +68,11 @@ export function CreditBar() {
     <Bar>
       <Group>
         <Label>Chips</Label>
-        <ChipsValue>{chips.toLocaleString()}</ChipsValue>
+        <ChipsValue>{formatNum(chips)}</ChipsValue>
       </Group>
       <Group>
         <Label>Wager</Label>
-        <WagerValue>{bet.toLocaleString()}</WagerValue>
+        <WagerValue>{formatNum(bet)}</WagerValue>
       </Group>
     </Bar>
   );

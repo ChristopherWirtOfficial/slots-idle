@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { atom } from 'jotai';
 import { SpinResult } from '../engine/types';
 
@@ -6,7 +7,7 @@ export const lastResultAtom = atom<SpinResult | null>(null);
 
 export interface FloatEvent {
   id: number;
-  amount: number;
+  amount: Decimal;
   isJackpot: boolean;
 }
 export const lastFloatAtom = atom<FloatEvent | null>(null);

@@ -79,8 +79,8 @@ type WinTier = 'none' | 'small' | 'big' | 'jackpot';
 
 function winTier(result: SpinResult, bet: number): WinTier {
   if (result.hasJackpot) return 'jackpot';
-  if (result.totalPayout >= bet * 10) return 'big';
-  if (result.totalPayout > 0) return 'small';
+  if (result.totalPayout.gte(bet * 10)) return 'big';
+  if (result.totalPayout.gt(0)) return 'small';
   return 'none';
 }
 
@@ -90,7 +90,8 @@ export const spinActionAtom = atom(null, (get, set) => {
   if (get(pendingResultAtom) !== null) return;
 
   const bet = get(betAtom);
-  if (get(chipsAtom) < bet) return;
+  const chipsBefore = get(chipsAtom);
+  if (chipsBefore.lt(bet)) return;
 
   const machine = get(activeMachineAtom);
   const config: ResolvedMachineConfig = get(resolvedConfigAtom);
@@ -98,7 +99,7 @@ export const spinActionAtom = atom(null, (get, set) => {
   const mult = get(globalMultAtom);
   const result = spin({ machine, config, bet, luck, globalMult: mult });
 
-  set(chipsAtom, get(chipsAtom) - bet);
+  set(chipsAtom, chipsBefore.sub(bet));
   set(lastFloatAtom, null);
 
   const nearMiss = detectNearMiss(result, config.paylines);
@@ -152,13 +153,13 @@ export const animationTickAtom = atom(null, (get, set) => {
   if (get(anyReelSpinningAtom)) return;
 
   // All reels landed — commit the pending result.
-  set(chipsAtom, get(chipsAtom) + pending.totalPayout);
-  set(lifetimeWinningsAtom, get(lifetimeWinningsAtom) + pending.totalPayout);
-  set(totalEverWonAtom, get(totalEverWonAtom) + pending.totalPayout);
+  set(chipsAtom, get(chipsAtom).add(pending.totalPayout));
+  set(lifetimeWinningsAtom, get(lifetimeWinningsAtom).add(pending.totalPayout));
+  set(totalEverWonAtom, get(totalEverWonAtom).add(pending.totalPayout));
   const spins = get(spinsTotalAtom) + 1;
   set(spinsTotalAtom, spins);
   set(lastResultAtom, pending);
-  if (pending.totalPayout > 0) {
+  if (pending.totalPayout.gt(0)) {
     set(lastFloatAtom, {
       id: spins,
       amount: pending.totalPayout,

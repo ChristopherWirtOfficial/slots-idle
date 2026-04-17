@@ -1,9 +1,11 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
+import Decimal from 'break_infinity.js';
 import { useAtomValue } from 'jotai';
 import { allUpgradesAtom } from '../state/machine';
 import { theme } from '../theme';
+import { formatNum } from '../util/format';
 
 const Panel = styled.aside`
   background: linear-gradient(180deg, ${theme.color.velvet}, ${theme.color.bgDeep});
@@ -125,8 +127,8 @@ const Cost = styled.span<{ affordable: boolean }>`
 
 interface UpgradesPanelProps {
   levels: Record<string, number>;
-  costs: Record<string, number>;
-  chips: number;
+  costs: Record<string, Decimal>;
+  chips: Decimal;
   onBuy: (id: string) => void;
 }
 
@@ -139,9 +141,9 @@ export function UpgradesPanel({ levels, costs, chips, onBuy }: UpgradesPanelProp
 
       {upgrades.map((u) => {
         const lvl = levels[u.id] ?? 0;
-        const cost = costs[u.id] ?? 0;
+        const cost = costs[u.id] ?? new Decimal(0);
         const maxed = lvl >= u.maxLevel;
-        const affordable = !maxed && chips >= cost;
+        const affordable = !maxed && chips.gte(cost);
         const effectLabel = u.format ? u.format(lvl) : `Level ${lvl}`;
         return (
           <Row
@@ -160,7 +162,7 @@ export function UpgradesPanel({ levels, costs, chips, onBuy }: UpgradesPanelProp
               <Effect>{effectLabel}</Effect>
               {!maxed && (
                 <Cost affordable={affordable}>
-                  {cost.toLocaleString()} <span css={css`color:${theme.color.ivoryDim};font-weight:400;`}>chips</span>
+                  {formatNum(cost)} <span css={css`color:${theme.color.ivoryDim};font-weight:400;`}>chips</span>
                 </Cost>
               )}
             </RowBottom>

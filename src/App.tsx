@@ -223,7 +223,7 @@ export function App() {
   const doPrestige = useSetAtom(prestigeActionAtom);
   const doReset = useSetAtom(resetActionAtom);
 
-  const canSpin = !isSpinning && chips >= bet;
+  const canSpin = !isSpinning && chips.gte(bet);
 
   const handleReset = () => {
     if (confirm('Erase everything? No takebacks.')) doReset();

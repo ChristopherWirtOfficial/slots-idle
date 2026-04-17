@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { atom } from 'jotai';
 import { chipsAtom } from '../economy';
 import { passiveAmountAtom } from '../upgrades';
@@ -12,5 +13,7 @@ import { passiveAmountAtom } from '../upgrades';
  * handles passive income now.
  */
 export const passiveIncomeTickAtom = atom(null, (get, set) => {
-  set(chipsAtom, get(chipsAtom) + get(passiveAmountAtom));
+  const amount = get(passiveAmountAtom);
+  if (amount === 0) return;
+  set(chipsAtom, get(chipsAtom).add(new Decimal(amount)));
 });

@@ -1,7 +1,9 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
+import Decimal from 'break_infinity.js';
 import { theme } from '../theme';
 import { prestigeMultiplier } from '../engine/upgrades';
+import { formatNum } from '../util/format';
 
 const Panel = styled.aside`
   background: linear-gradient(180deg, ${theme.color.velvet}, ${theme.color.bgDeep});
@@ -128,14 +130,15 @@ const ResetBtn = styled.button`
 `;
 
 interface StatsProps {
-  chips: number;
-  lifetimeWinnings: number;
-  totalEverWon: number;
+  chips: Decimal;
+  lifetimeWinnings: Decimal;
+  totalEverWon: Decimal;
   spinsTotal: number;
   jackpots: number;
-  highRollerPoints: number;
-  prestigePending: number;
-  globalMult: number;
+  highRollerPoints: Decimal;
+  prestigePending: Decimal;
+  globalMult: Decimal;
+  /** Passive income per tick — stays a plain number (small-bounded). */
   passiveAmount: number;
   passiveRateMs: number;
   onPrestige: () => void;
@@ -155,7 +158,8 @@ export function StatsPanel({
   onPrestige,
   onReset,
 }: StatsProps) {
-  const nextMult = prestigeMultiplier(highRollerPoints + prestigePending);
+  const hrpReady = prestigePending.gt(0);
+  const nextMult = prestigeMultiplier(highRollerPoints.add(prestigePending));
   const chipsPerSec = passiveAmount / (passiveRateMs / 1000);
   return (
     <Panel>
@@ -163,28 +167,28 @@ export function StatsPanel({
         <Title>Ledger</Title>
         <Sub>House Records</Sub>
         <StatRow><StatLabel>Total spins</StatLabel><StatValue>{spinsTotal.toLocaleString()}</StatValue></StatRow>
-        <StatRow><StatLabel>Lifetime winnings</StatLabel><StatValue>{lifetimeWinnings.toLocaleString()}</StatValue></StatRow>
-        <StatRow><StatLabel>All-time won</StatLabel><StatValue>{totalEverWon.toLocaleString()}</StatValue></StatRow>
+        <StatRow><StatLabel>Lifetime winnings</StatLabel><StatValue>{formatNum(lifetimeWinnings)}</StatValue></StatRow>
+        <StatRow><StatLabel>All-time won</StatLabel><StatValue>{formatNum(totalEverWon)}</StatValue></StatRow>
         <StatRow><StatLabel>Jackpots hit</StatLabel><StatValue>{jackpots}</StatValue></StatRow>
-        <StatRow><StatLabel>Payout multiplier</StatLabel><StatValue>×{globalMult.toFixed(2)}</StatValue></StatRow>
+        <StatRow><StatLabel>Payout multiplier</StatLabel><StatValue>×{formatNum(globalMult)}</StatValue></StatRow>
         <StatRow><StatLabel>Passive income</StatLabel><StatValue>{chipsPerSec.toFixed(2)} / s</StatValue></StatRow>
       </div>
 
-      <PrestigeCard ready={prestigePending > 0}>
+      <PrestigeCard ready={hrpReady}>
         <PrestigeTitle>High Roller</PrestigeTitle>
         <PrestigeBlurb>
-          {highRollerPoints > 0 && (
-            <>You hold <b style={{color: theme.color.goldBright}}>{highRollerPoints}</b> HRP — permanent ×{prestigeMultiplier(highRollerPoints).toFixed(2)} winnings.<br/></>
+          {highRollerPoints.gt(0) && (
+            <>You hold <b style={{color: theme.color.goldBright}}>{formatNum(highRollerPoints)}</b> HRP — permanent ×{formatNum(prestigeMultiplier(highRollerPoints))} winnings.<br/></>
           )}
-          {prestigePending > 0
-            ? `Cash out now for +${prestigePending} HRP. New total mult: ×${nextMult.toFixed(2)}.`
+          {hrpReady
+            ? `Cash out now for +${formatNum(prestigePending)} HRP. New total mult: ×${formatNum(nextMult)}.`
             : 'Win 10,000 chips this run to earn your first HRP.'}
         </PrestigeBlurb>
         <PrestigeButton
-          disabled={prestigePending === 0}
-          onClick={() => prestigePending > 0 && onPrestige()}
+          disabled={!hrpReady}
+          onClick={() => hrpReady && onPrestige()}
         >
-          {prestigePending > 0 ? `Cash out · +${prestigePending}` : 'Locked'}
+          {hrpReady ? `Cash out · +${formatNum(prestigePending)}` : 'Locked'}
         </PrestigeButton>
       </PrestigeCard>
 

@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { atom } from 'jotai';
 import {
   chipsAtom,
@@ -11,16 +12,17 @@ import { highRollerPointsAtom, prestigePendingAtom } from '../prestige';
 import { lastFloatAtom, lastResultAtom, pendingResultAtom } from '../session';
 import { reelAtomsAtom } from '../reels';
 
-const STARTING_CHIPS = 20;
+const STARTING_CHIPS = () => new Decimal(20);
+const ZERO = () => new Decimal(0);
 
 /** Cash in prestige: gain HRP, wipe run-local state. Reels re-sync. */
 export const prestigeActionAtom = atom(null, (get, set) => {
   const gain = get(prestigePendingAtom);
-  if (gain <= 0) return;
+  if (gain.lte(0)) return;
 
-  set(highRollerPointsAtom, get(highRollerPointsAtom) + gain);
-  set(chipsAtom, STARTING_CHIPS);
-  set(lifetimeWinningsAtom, 0);
+  set(highRollerPointsAtom, get(highRollerPointsAtom).add(gain));
+  set(chipsAtom, STARTING_CHIPS());
+  set(lifetimeWinningsAtom, ZERO());
   set(levelsAtom, {});
   set(lastResultAtom, null);
   set(lastFloatAtom, null);
@@ -32,12 +34,12 @@ export const prestigeActionAtom = atom(null, (get, set) => {
 
 /** Wipe everything. No takebacks. */
 export const resetActionAtom = atom(null, (get, set) => {
-  set(chipsAtom, STARTING_CHIPS);
-  set(lifetimeWinningsAtom, 0);
-  set(totalEverWonAtom, 0);
+  set(chipsAtom, STARTING_CHIPS());
+  set(lifetimeWinningsAtom, ZERO());
+  set(totalEverWonAtom, ZERO());
   set(jackpotsAtom, 0);
   set(spinsTotalAtom, 0);
-  set(highRollerPointsAtom, 0);
+  set(highRollerPointsAtom, ZERO());
   set(levelsAtom, {});
   set(lastResultAtom, null);
   set(lastFloatAtom, null);

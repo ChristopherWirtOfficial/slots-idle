@@ -16,9 +16,10 @@ export const buyUpgradeAtom = atom(null, (get, set, id: string) => {
   if (lvl >= u.maxLevel) return;
 
   const cost = costOf(u, lvl);
-  if (get(chipsAtom) < cost) return;
+  const chips = get(chipsAtom);
+  if (chips.lt(cost)) return;
 
-  set(chipsAtom, get(chipsAtom) - cost);
+  set(chipsAtom, chips.sub(cost));
   set(levelsAtom, { ...levels, [id]: lvl + 1 });
   sfxUpgrade();
 });

@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { atom } from 'jotai';
 import { GLOBAL_UPGRADES, costOf } from '../engine/upgrades';
 import { levelsAtom } from './levels';
@@ -8,7 +9,7 @@ import { cheatLuckAtom } from './cheats';
 export const costsAtom = atom((get) => {
   const upgrades = get(allUpgradesAtom);
   const levels = get(levelsAtom);
-  const result: Record<string, number> = {};
+  const result: Record<string, Decimal> = {};
   for (const u of upgrades) {
     result[u.id] = costOf(u, levels[u.id] ?? 0);
   }

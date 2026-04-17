@@ -1,7 +1,9 @@
 /** @jsxImportSource @emotion/react */
 import { keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
+import Decimal from 'break_infinity.js';
 import { theme } from '../../theme';
+import { formatNum } from '../../util/format';
 
 const rise = keyframes`
   0% { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
@@ -41,18 +43,21 @@ const Text = styled.div<{ tier: Tier }>`
 `;
 
 interface FloatingWinProps {
-  amount: number;
+  amount: Decimal;
   isJackpot: boolean;
   /** Amount threshold at which the toast renders in "big" size. */
-  bigThreshold: number;
+  bigThreshold: Decimal;
 }
 
 /** Animated +N chip toast rising from the grid center. */
 export function FloatingWin({ amount, isJackpot, bigThreshold }: FloatingWinProps) {
-  const tier: Tier = isJackpot ? 'jackpot' : amount >= bigThreshold ? 'big' : 'small';
-  const label = isJackpot
-    ? `★ +${amount.toLocaleString()} ★`
-    : `+${amount.toLocaleString()}`;
+  const tier: Tier = isJackpot
+    ? 'jackpot'
+    : amount.gte(bigThreshold)
+    ? 'big'
+    : 'small';
+  const formatted = formatNum(amount);
+  const label = isJackpot ? `★ +${formatted} ★` : `+${formatted}`;
 
   return (
     <Wrap>

@@ -1,3 +1,4 @@
+import Decimal from 'break_infinity.js';
 import { Machine, ResolvedMachineConfig, SpinResult } from './types';
 import { generateGrid } from './grid';
 
@@ -10,7 +11,7 @@ export function spin(opts: {
   config: ResolvedMachineConfig;
   bet: number;
   luck: number;
-  globalMult: number;
+  globalMult: Decimal;
   rng?: () => number;
 }): SpinResult {
   const rng = opts.rng ?? Math.random;
@@ -21,7 +22,10 @@ export function spin(opts: {
     bet: opts.bet,
     globalMult: opts.globalMult,
   });
-  const totalPayout = wins.reduce((s, w) => s + w.payout, 0);
+  const totalPayout = wins.reduce<Decimal>(
+    (s, w) => s.add(w.payout),
+    new Decimal(0),
+  );
   const hasJackpot = wins.some((w) => w.isJackpot);
   return { grid, wins, totalPayout, hasJackpot };
 }
