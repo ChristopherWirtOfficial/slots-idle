@@ -21,11 +21,14 @@ export interface ArchetypeSummary {
   simTimeMin: Stats;
   lifetimeWinningsLog10: Stats;
   finalLevels: Record<string, Stats>;
-  /** Time (in spins) between consecutive purchases, aggregated across all runs. */
+  /** Spins between consecutive purchases, aggregated across all runs. */
   interPurchaseSpins: Stats;
-  /** Per-upgrade: across all runs, at what spin count was it first purchased?
-   *  Runs that never bought it are NOT in the dataset (they're counted separately). */
+  /** Minutes between consecutive purchases. Same events as above, wall-time. */
+  interPurchaseMin: Stats;
+  /** Per-upgrade: first-purchase spin count (runs that never bought it excluded). */
   firstPurchaseSpin: Record<string, Stats>;
+  /** Per-upgrade: first-purchase sim-minutes (same dataset). */
+  firstPurchaseMin: Record<string, Stats>;
   firstPurchaseNeverCount: Record<string, number>;
 }
 
@@ -52,25 +55,34 @@ function statsOf(xs: number[]): Stats {
   };
 }
 
-function interPurchaseSpans(t: Trajectory): number[] {
-  const spans: number[] = [];
+function interPurchaseSpans(t: Trajectory): { spins: number[]; simMin: number[] } {
+  const spins: number[] = [];
+  const simMin: number[] = [];
   let lastBuySpin: number | null = null;
+  let lastBuyMs: number | null = null;
   for (const e of t.entries) {
     if (e.event.kind !== 'buy') continue;
-    if (lastBuySpin !== null) {
-      spans.push(e.spinCount - lastBuySpin);
+    if (lastBuySpin !== null && lastBuyMs !== null) {
+      spins.push(e.spinCount - lastBuySpin);
+      simMin.push((e.simTimeMs - lastBuyMs) / 60000);
     }
     lastBuySpin = e.spinCount;
+    lastBuyMs = e.simTimeMs;
   }
-  return spans;
+  return { spins, simMin };
 }
 
-function firstPurchaseSpins(t: Trajectory): Record<string, number> {
-  const out: Record<string, number> = {};
+function firstPurchaseBy(
+  t: Trajectory,
+): Record<string, { spin: number; simMin: number }> {
+  const out: Record<string, { spin: number; simMin: number }> = {};
   for (const e of t.entries) {
     if (e.event.kind !== 'buy') continue;
     if (out[e.event.upgradeId] === undefined) {
-      out[e.event.upgradeId] = e.spinCount;
+      out[e.event.upgradeId] = {
+        spin: e.spinCount,
+        simMin: e.simTimeMs / 60000,
+      };
     }
   }
   return out;
@@ -91,8 +103,10 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
     const simTimes: number[] = [];
     const logWinnings: number[] = [];
     const finalLevels: Record<string, number[]> = {};
-    const allSpans: number[] = [];
-    const firstPurchaseByUpgrade: Record<string, number[]> = {};
+    const allSpansSpins: number[] = [];
+    const allSpansMin: number[] = [];
+    const firstSpinByUpgrade: Record<string, number[]> = {};
+    const firstMinByUpgrade: Record<string, number[]> = {};
     const neverPurchased: Record<string, number> = {};
 
     // Gather all upgrade IDs we see across runs
@@ -118,13 +132,18 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
         finalLevels[id].push(t.final.levels[id] ?? 0);
       }
 
-      allSpans.push(...interPurchaseSpans(t));
+      const spans = interPurchaseSpans(t);
+      allSpansSpins.push(...spans.spins);
+      allSpansMin.push(...spans.simMin);
 
-      const firstByUpgrade = firstPurchaseSpins(t);
+      const firstByUpgrade = firstPurchaseBy(t);
       for (const id of knownUpgrades) {
-        if (firstByUpgrade[id] !== undefined) {
-          if (!firstPurchaseByUpgrade[id]) firstPurchaseByUpgrade[id] = [];
-          firstPurchaseByUpgrade[id].push(firstByUpgrade[id]);
+        const fp = firstByUpgrade[id];
+        if (fp !== undefined) {
+          if (!firstSpinByUpgrade[id]) firstSpinByUpgrade[id] = [];
+          firstSpinByUpgrade[id].push(fp.spin);
+          if (!firstMinByUpgrade[id]) firstMinByUpgrade[id] = [];
+          firstMinByUpgrade[id].push(fp.simMin);
         } else {
           neverPurchased[id] = (neverPurchased[id] ?? 0) + 1;
         }
@@ -136,9 +155,13 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
       finalLevelsStats[id] = statsOf(xs);
     }
 
-    const firstPurchaseStats: Record<string, Stats> = {};
-    for (const [id, xs] of Object.entries(firstPurchaseByUpgrade)) {
-      firstPurchaseStats[id] = statsOf(xs);
+    const firstSpinStats: Record<string, Stats> = {};
+    for (const [id, xs] of Object.entries(firstSpinByUpgrade)) {
+      firstSpinStats[id] = statsOf(xs);
+    }
+    const firstMinStats: Record<string, Stats> = {};
+    for (const [id, xs] of Object.entries(firstMinByUpgrade)) {
+      firstMinStats[id] = statsOf(xs);
     }
 
     summaries.push({
@@ -149,13 +172,35 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
       simTimeMin: statsOf(simTimes),
       lifetimeWinningsLog10: statsOf(logWinnings),
       finalLevels: finalLevelsStats,
-      interPurchaseSpins: statsOf(allSpans),
-      firstPurchaseSpin: firstPurchaseStats,
+      interPurchaseSpins: statsOf(allSpansSpins),
+      interPurchaseMin: statsOf(allSpansMin),
+      firstPurchaseSpin: firstSpinStats,
+      firstPurchaseMin: firstMinStats,
       firstPurchaseNeverCount: neverPurchased,
     });
   }
 
   return summaries;
+}
+
+/** Format a minute count with unit suffix, picking sensible precision. */
+function fmtMin(m: number): string {
+  if (m < 1) return `${(m * 60).toFixed(0)}s`;
+  if (m < 10) return `${m.toFixed(1)}m`;
+  if (m < 60) return `${m.toFixed(0)}m`;
+  const hrs = m / 60;
+  return `${hrs.toFixed(1)}h`;
+}
+
+/** Format a log10 winnings value as a friendly suffix number. */
+function fmtLog10(log: number): string {
+  if (log <= 0) return '0';
+  const v = Math.pow(10, log);
+  if (v < 1000) return v.toFixed(0);
+  if (v < 1e6) return `${(v / 1e3).toFixed(1)}K`;
+  if (v < 1e9) return `${(v / 1e6).toFixed(1)}M`;
+  if (v < 1e12) return `${(v / 1e9).toFixed(1)}B`;
+  return `1e${log.toFixed(1)}`;
 }
 
 /** Human-readable text dump of a summary set. */
@@ -171,34 +216,46 @@ export function printSummary(summaries: ArchetypeSummary[]): string {
         .join(', ')}`,
     );
     lines.push(
-      `  spins: mean=${s.spinCount.mean.toFixed(0)} median=${s.spinCount.median} p5=${s.spinCount.p5} p95=${s.spinCount.p95}`,
+      `  run length: ${fmtMin(s.simTimeMin.median)} median, ` +
+      `${fmtMin(s.simTimeMin.p5)}-${fmtMin(s.simTimeMin.p95)} p5-p95 ` +
+      `(${s.spinCount.median} spins median)`,
     );
     lines.push(
-      `  sim-time (min): median=${s.simTimeMin.median.toFixed(1)} p5=${s.simTimeMin.p5.toFixed(1)} p95=${s.simTimeMin.p95.toFixed(1)}`,
+      `  lifetime chips earned: ${fmtLog10(s.lifetimeWinningsLog10.median)} median, ` +
+      `${fmtLog10(s.lifetimeWinningsLog10.p5)}-${fmtLog10(s.lifetimeWinningsLog10.p95)} p5-p95`,
     );
     lines.push(
-      `  log10(lifetime): median=${s.lifetimeWinningsLog10.median.toFixed(2)} p5=${s.lifetimeWinningsLog10.p5.toFixed(2)} p95=${s.lifetimeWinningsLog10.p95.toFixed(2)}`,
+      `  inter-purchase gap: ${fmtMin(s.interPurchaseMin.median)} median, ` +
+      `${fmtMin(s.interPurchaseMin.p5)}-${fmtMin(s.interPurchaseMin.p95)} p5-p95 ` +
+      `(${s.interPurchaseSpins.median} spins median)`,
     );
-    lines.push(
-      `  inter-purchase-spins: median=${s.interPurchaseSpins.median} p5=${s.interPurchaseSpins.p5} p95=${s.interPurchaseSpins.p95}`,
-    );
-    lines.push('  first-purchase-spin (median / p5–p95 / never):');
-    const upgradeIds = Object.keys({ ...s.firstPurchaseSpin, ...s.firstPurchaseNeverCount });
+    lines.push('  first-purchase time (median / p5-p95 / never):');
+    const upgradeIds = Object.keys({
+      ...s.firstPurchaseMin,
+      ...s.firstPurchaseNeverCount,
+    });
     upgradeIds.sort();
     for (const id of upgradeIds) {
-      const fp = s.firstPurchaseSpin[id];
+      const fp = s.firstPurchaseMin[id];
+      const fs = s.firstPurchaseSpin[id];
       const never = s.firstPurchaseNeverCount[id] ?? 0;
-      if (fp) {
+      if (fp && fs) {
+        const label = `${fmtMin(fp.median)} / ${fs.median}sp`.padEnd(16);
+        const range = `[${fmtMin(fp.p5)}-${fmtMin(fp.p95)}]`.padEnd(20);
         lines.push(
-          `    ${id.padEnd(18)} ${String(fp.median).padStart(5)}  [${fp.p5}..${fp.p95}]  never=${never}`,
+          `    ${id.padEnd(16)} ${label} ${range} never=${never}`,
         );
       } else {
-        lines.push(`    ${id.padEnd(18)} (never purchased) never=${never}`);
+        lines.push(
+          `    ${id.padEnd(16)} (never purchased)                         never=${never}`,
+        );
       }
     }
-    lines.push('  final levels (median):');
+    lines.push('  final levels (median / p5-p95):');
     for (const [id, st] of Object.entries(s.finalLevels)) {
-      lines.push(`    ${id.padEnd(18)} median=${st.median}  p5=${st.p5} p95=${st.p95}`);
+      lines.push(
+        `    ${id.padEnd(16)} ${String(st.median).padStart(3)}  [${st.p5}..${st.p95}]`,
+      );
     }
   }
   return lines.join('\n');
