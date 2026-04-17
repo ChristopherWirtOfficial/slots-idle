@@ -4,6 +4,7 @@ import { useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { anyCheatActiveAtom } from '../../state/cheats';
 import { LuckCheat } from './LuckCheat';
+import { ResetCheat } from './ResetCheat';
 
 const Wrap = styled.div`
   position: fixed;
@@ -94,6 +95,7 @@ export function CheatPanel() {
       {open && (
         <Body>
           <LuckCheat />
+          <ResetCheat />
         </Body>
       )}
     </Wrap>
