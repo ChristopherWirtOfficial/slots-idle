@@ -2,13 +2,14 @@ import { writeFileSync } from 'fs';
 import { DEFAULT_BATCH, runBatch } from './batch';
 import { printSummary, summarize } from './analysis/summary';
 import { trajectoriesToCsv } from './analysis/csv';
-import { incomeCurves, renderIncomeCurve } from './analysis/income';
+import { incomeCurves, rawSnapshotCsv, renderIncomeCurve } from './analysis/income';
 
 interface CliArgs {
   seeds: number;
   csv: string | null;
   chart: boolean;
   incomeCsv: string | null;
+  rawCsv: string | null;
   help: boolean;
 }
 
@@ -18,6 +19,7 @@ function parseArgs(argv: string[]): CliArgs {
     csv: null,
     chart: false,
     incomeCsv: null,
+    rawCsv: null,
     help: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -31,6 +33,8 @@ function parseArgs(argv: string[]): CliArgs {
       args.chart = true;
     } else if (a === '--income-csv') {
       args.incomeCsv = argv[++i];
+    } else if (a === '--raw-csv') {
+      args.rawCsv = argv[++i];
     }
   }
   return args;
@@ -96,6 +100,12 @@ async function main() {
     const csv = rows.join('\n');
     writeFileSync(args.incomeCsv, csv, 'utf8');
     console.log(`Income-curve CSV: ${args.incomeCsv} (${(csv.length / 1024).toFixed(1)} KB)`);
+  }
+
+  if (args.rawCsv) {
+    const csv = rawSnapshotCsv(batch, batch.config.snapshotIntervalMs);
+    writeFileSync(args.rawCsv, csv, 'utf8');
+    console.log(`Raw snapshot CSV: ${args.rawCsv} (${(csv.length / 1024).toFixed(1)} KB)`);
   }
 }
 

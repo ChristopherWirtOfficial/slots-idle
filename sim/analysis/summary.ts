@@ -47,6 +47,10 @@ export interface ArchetypeSummary {
   firstPurchaseNeverCount: Record<string, number>;
   /** Cost-tier banded metrics — early/mid/late game cadence readouts. */
   tiers: TierStats[];
+  /** Minutes spent with chips < bet, waiting for passive to recover. */
+  timeUnderBetMin: Stats;
+  /** Number of distinct under-bet episodes per run. */
+  underBetEpisodes: Stats;
 }
 
 export interface Stats {
@@ -166,6 +170,8 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
     const firstSpinByUpgrade: Record<string, number[]> = {};
     const firstMinByUpgrade: Record<string, number[]> = {};
     const neverPurchased: Record<string, number> = {};
+    const timeUnderBetMins: number[] = [];
+    const underBetEpsValues: number[] = [];
 
     // Per-tier accumulators — one array-of-arrays per tier
     const tierFirsts: number[][] = TIER_UPPERS.map(() => []);
@@ -221,6 +227,9 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
         if (tiers.counts[i] > 0) tierCounts[i].push(tiers.counts[i]);
         else tierNeverEntered[i]++;
       }
+
+      timeUnderBetMins.push(t.final.timeUnderBetMs / 60000);
+      underBetEpsValues.push(t.final.underBetEpisodes);
     }
 
     const finalLevelsStats: Record<string, Stats> = {};
@@ -263,6 +272,8 @@ export function summarize(result: BatchResult): ArchetypeSummary[] {
       firstPurchaseMin: firstMinStats,
       firstPurchaseNeverCount: neverPurchased,
       tiers,
+      timeUnderBetMin: statsOf(timeUnderBetMins),
+      underBetEpisodes: statsOf(underBetEpsValues),
     });
   }
 
@@ -314,6 +325,11 @@ export function printSummary(summaries: ArchetypeSummary[]): string {
       `  inter-purchase gap: ${fmtMin(s.interPurchaseMin.median)} median, ` +
       `${fmtMin(s.interPurchaseMin.p5)}-${fmtMin(s.interPurchaseMin.p95)} p5-p95 ` +
       `(${s.interPurchaseSpins.median} spins median)`,
+    );
+    lines.push(
+      `  time under bet (waiting for passive): ${fmtMin(s.timeUnderBetMin.median)} median, ` +
+      `${fmtMin(s.timeUnderBetMin.p5)}-${fmtMin(s.timeUnderBetMin.p95)} p5-p95, ` +
+      `${s.underBetEpisodes.median} episodes (median)`,
     );
     lines.push('  first-purchase time (median / p5-p95 / never):');
     const upgradeIds = Object.keys({

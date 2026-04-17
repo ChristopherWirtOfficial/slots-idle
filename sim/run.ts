@@ -214,6 +214,10 @@ export function runTrajectory(
 
   // --- Main loop ---
   let terminateReason: TerminateReason | null = null;
+  let timeUnderBetMs = 0;
+  let underBetEpisodes = 0;
+  let currentlyUnderBet = false;
+
   while (terminateReason === null) {
     // Decision moment: try to buy upgrades, then spin (with pacing), or wait.
     tryBuyAll(state);
@@ -221,6 +225,11 @@ export function runTrajectory(
     const derived = derive(state);
 
     if (state.chips.lt(derived.bet)) {
+      // Mark entry into under-bet state
+      if (!currentlyUnderBet) {
+        underBetEpisodes++;
+        currentlyUnderBet = true;
+      }
       if (isSoftlocked(state)) {
         terminateReason = 'softlock';
         break;
@@ -230,6 +239,7 @@ export function runTrajectory(
       const waitMs = derived.passiveRateMs || 1000;
       const targetMs = state.simTimeMs + waitMs;
       accruePassive(state, derived, targetMs);
+      timeUnderBetMs += waitMs;
       state.simTimeMs = targetMs;
       emitSnapshotsUpTo(state.simTimeMs);
       if (state.simTimeMs >= config.maxSimTimeMs) {
@@ -238,6 +248,9 @@ export function runTrajectory(
       }
       continue;
     }
+
+    // Back above bet
+    currentlyUnderBet = false;
 
     // Can afford a spin — wait for the player's pacing first.
     const delay = nextPlayerDelayMs(derived);
@@ -277,5 +290,7 @@ export function runTrajectory(
     lifetimeWinnings: state.lifetimeWinnings,
     levels: { ...state.levels },
     terminateReason,
+    timeUnderBetMs,
+    underBetEpisodes,
   });
 }

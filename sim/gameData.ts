@@ -71,16 +71,41 @@ export interface SimUpgrade {
   role: 'bet' | 'luck' | 'multiplier' | 'passive-amount' | 'passive-rate' | 'autospin' | 'topology';
 }
 
+/**
+ * Bet effect: sum of ceil(k/3) for k=1..lvl. Step-every-3 increment
+ * pattern (+1,+1,+1,+2,+2,+2,+3,+3,+3,+4,...). Base bet is 1, so
+ * wagered chips at level n = 1 + sum.
+ */
+function betEffect(lvl: number): number {
+  let sum = 0;
+  for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
+  return 1 + sum;
+}
+
 export const UPGRADES: SimUpgrade[] = [
   // Economic
-  { id: 'bet',            baseCost: 50,   costMult: 1.45, maxLevel: 50, effect: (l) => 1 + l,                                 role: 'bet' },
-  { id: 'luck',           baseCost: 120,  costMult: 1.6,  maxLevel: 25, effect: (l) => l * 0.02,                              role: 'luck' },
-  { id: 'multiplier',     baseCost: 1000, costMult: 1.9,  maxLevel: 30, effect: (l) => 1 + l * 0.1,                           role: 'multiplier' },
-  // Passive income
-  { id: 'passiveAmount',  baseCost: 50,   costMult: 1.55, maxLevel: 10, effect: (l) => 1 + l,                                 role: 'passive-amount' },
-  { id: 'passiveRate',    baseCost: 120,  costMult: 1.6,  maxLevel: 16, effect: (l) => Math.max(2000, 10000 - l * 500),       role: 'passive-rate' },
+  // bet: cheap base, step-every-3 effect pattern — "felt moments" at every
+  //   third level. Moderate cost scaling. The "leveraged" lever: big wins
+  //   AND big dry-streak cost.
+  { id: 'bet',            baseCost: 35,   costMult: 1.5,  maxLevel: 50, effect: betEffect,                                    role: 'bet' },
+  // luck DISABLED for current tuning pass.
+  { id: 'luck',           baseCost: 120,  costMult: 1.6,  maxLevel: 0,  effect: (l) => l * 0.02,                              role: 'luck' },
+  // multiplier: 1.5^level effect. costMult 2.4 produces ratio shift of
+  //   1.5/2.4 = 0.625 per level (each buy 37% worse value than last).
+  //   Plateau behavior, tunable without blowing up.
+  { id: 'multiplier',     baseCost: 200,  costMult: 2.4,  maxLevel: 30, effect: (l) => Math.pow(1.5, l),                      role: 'multiplier' },
+  // Passive income — floor is on (1 chip / 10s baseline at level 0), but
+  // upgrades are disabled. Role here is strictly anti-softlock insurance,
+  // not an income driver.
+  // Passive income — lifeline, not an income driver. Tuned so it offsets
+  //   early bet costs and provides an AFK recovery path when the player
+  //   has over-spent, but at max level is still a tiny fraction of primary
+  //   income. Max state: 4 chips / 5.5s ≈ 43/min.
+  { id: 'passiveAmount',  baseCost: 80,   costMult: 2.0,  maxLevel: 3,  effect: (l) => 1 + l,                                 role: 'passive-amount' },
+  { id: 'passiveRate',    baseCost: 150,  costMult: 2.0,  maxLevel: 3,  effect: (l) => Math.max(5000, 10000 - l * 1500),      role: 'passive-rate' },
   // Automation
-  { id: 'autospin',       baseCost: 300,  costMult: 1.8,  maxLevel: 10, effect: (l) => (l === 0 ? 0 : Math.max(200, 5000 - (l - 1) * 534)), role: 'autospin' },
+  // autospin: 150 base cost puts first-buy in tier-2 (100-300 band).
+  { id: 'autospin',       baseCost: 150,  costMult: 1.8,  maxLevel: 10, effect: (l) => (l === 0 ? 0 : Math.max(200, 5000 - (l - 1) * 534)), role: 'autospin' },
   // Topology
   { id: 'extraReel',      baseCost: 15000, costMult: 4,   maxLevel: 2,  effect: (l) => 3 + l,                                 role: 'topology' },
   { id: 'extraRow',       baseCost: 25000, costMult: 5,   maxLevel: 1,  effect: (l) => 3 + l,                                 role: 'topology' },

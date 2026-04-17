@@ -44,6 +44,10 @@ export interface Trajectory {
     lifetimeWinnings: Decimal;
     levels: Record<string, number>;
     terminateReason: TerminateReason;
+    /** Cumulative ms spent with chips < bet (waiting for passive to recover). */
+    timeUnderBetMs: number;
+    /** Number of distinct times the player dipped below bet. */
+    underBetEpisodes: number;
   };
 }
 

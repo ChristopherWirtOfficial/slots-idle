@@ -48,6 +48,24 @@ function median(xs: number[]): number {
 }
 
 /**
+ * Raw per-run snapshot CSV — one row per (archetype, seed, snapshot).
+ * Useful for downstream binning/aggregation that doesn't lose variance
+ * the way median-of-snapshots does.
+ */
+export function rawSnapshotCsv(batch: BatchResult, snapshotIntervalMs: number): string {
+  const rows = ['archetype,seed,tMin,rateChipsPerMin'];
+  for (const t of batch.trajectories) {
+    const snaps = snapshotRates(t, snapshotIntervalMs);
+    for (const s of snaps) {
+      rows.push(
+        `${t.archetypeId},${t.seed},${s.tMin.toFixed(2)},${s.rateChipsPerMin.toFixed(2)}`,
+      );
+    }
+  }
+  return rows.join('\n');
+}
+
+/**
  * Build median income curves per archetype. Aggregates snapshot rates
  * across all runs by snapshot index — run 1's 5min sample, run 2's
  * 5min sample, etc., take the median. That gives us "typical" income

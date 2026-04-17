@@ -1,4 +1,5 @@
 import { Archetype } from './types';
+import { burnout } from './policies/burnout';
 import { greedyCheap } from './policies/greedyCheap';
 import { randomAffordable } from './policies/randomAffordable';
 import { roiOptimal } from './policies/roiOptimal';
@@ -46,6 +47,13 @@ export const ARCHETYPES: Archetype[] = [
     description: 'Walks away often, buys randomly. Stress test.',
     player: idleHeavy,
     policy: randomAffordable,
+  },
+  {
+    id: 'burnout',
+    label: 'The Burnout',
+    description: 'Fast manual clicks, buys the most expensive affordable upgrade. Stress-test for softlock protection.',
+    player: fastClicker,
+    policy: burnout,
   },
 ];
 
