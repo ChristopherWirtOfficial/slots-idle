@@ -59,6 +59,7 @@ const StatLabel = styled.span`
 
 const StatValue = styled.span`
   font-family: ${theme.font.display};
+  font-variant-numeric: tabular-nums;
   font-style: italic;
   font-weight: 600;
   font-size: 16px;

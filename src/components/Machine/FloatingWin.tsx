@@ -27,6 +27,7 @@ const FONT_SIZE: Record<Tier, string> = {
 
 const Text = styled.div<{ tier: Tier }>`
   font-family: ${theme.font.display};
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-style: italic;
   font-size: ${(p) => FONT_SIZE[p.tier]};

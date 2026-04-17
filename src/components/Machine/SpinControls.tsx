@@ -26,6 +26,7 @@ const Label = styled.div`
 
 const Value = styled.div<{ emphasis?: boolean }>`
   font-family: ${theme.font.display};
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
   font-style: italic;
   font-size: ${(p) => (p.emphasis ? 'clamp(22px, 5.5vw, 28px)' : 'clamp(16px, 4vw, 20px)')};
@@ -34,6 +35,7 @@ const Value = styled.div<{ emphasis?: boolean }>`
 `;
 
 const Button = styled.button<{ inactive: boolean }>`
+  position: relative;
   font-family: ${theme.font.display};
   font-weight: 600;
   font-style: italic;
@@ -65,6 +67,28 @@ const Button = styled.button<{ inactive: boolean }>`
   }
 `;
 
+/**
+ * Hidden sizer: always carries the widest label text so the button's
+ * natural width is stable regardless of which label is actually shown.
+ * Without this the button grows/shrinks as "Pull" flips to "••• SPIN •••",
+ * which propagates as a horizontal shift through the 1fr grid columns on
+ * either side. aria-hidden because screen readers read the live ButtonLabel.
+ */
+const ButtonSizer = styled.span`
+  visibility: hidden;
+  pointer-events: none;
+`;
+
+const ButtonLabel = styled.span`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const SPINNING_LABEL = '••• SPIN •••';
+
 interface SpinControlsProps {
   bet: number;
   chips: number;
@@ -89,7 +113,8 @@ export function SpinControls({
       </Cell>
 
       <Button disabled={!canSpin} inactive={!canSpin} onClick={onSpin}>
-        {spinning ? '••• spin •••' : 'Pull'}
+        <ButtonSizer aria-hidden>{SPINNING_LABEL}</ButtonSizer>
+        <ButtonLabel>{spinning ? SPINNING_LABEL : 'Pull'}</ButtonLabel>
       </Button>
 
       <Cell align="right">

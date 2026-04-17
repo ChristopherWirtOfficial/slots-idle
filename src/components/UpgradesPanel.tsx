@@ -118,6 +118,7 @@ const Effect = styled.span`
 
 const Cost = styled.span<{ affordable: boolean }>`
   color: ${(p) => (p.affordable ? theme.color.goldBright : theme.color.oxbloodBright)};
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
   letter-spacing: 0.05em;
 `;
