@@ -106,9 +106,11 @@ export const UPGRADES: SimUpgrade[] = [
   // Automation
   // autospin: 150 base cost puts first-buy in tier-2 (100-300 band).
   { id: 'autospin',       baseCost: 150,  costMult: 1.8,  maxLevel: 10, effect: (l) => (l === 0 ? 0 : Math.max(200, 5000 - (l - 1) * 534)), role: 'autospin' },
-  // Topology
-  { id: 'extraReel',      baseCost: 15000, costMult: 4,   maxLevel: 2,  effect: (l) => 3 + l,                                 role: 'topology' },
-  { id: 'extraRow',       baseCost: 25000, costMult: 5,   maxLevel: 1,  effect: (l) => 3 + l,                                 role: 'topology' },
+  // Topology — DISABLED for this tuning pass. These are prestige-store
+  //   items in the planned design, not base-run upgrades. Keep them
+  //   defined so machine dimensions stay consistent at level 0.
+  { id: 'extraReel',      baseCost: 15000, costMult: 4,   maxLevel: 0,  effect: (l) => 3 + l,                                 role: 'topology' },
+  { id: 'extraRow',       baseCost: 25000, costMult: 5,   maxLevel: 0,  effect: (l) => 3 + l,                                 role: 'topology' },
 ];
 
 export const STARTING_CHIPS = 30;
