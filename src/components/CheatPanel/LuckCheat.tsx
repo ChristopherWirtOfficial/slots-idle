@@ -4,7 +4,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { cheatLuckAtom } from '../../state/cheats';
 import { luckAtom } from '../../state/upgrades';
 
-const LUCK_SLIDER_MAX = 3.0;
+const LUCK_SLIDER_MAX = 5.0;
 const LUCK_SLIDER_STEP = 0.05;
 const DEFAULT_OVERRIDE = 1.0;
 
