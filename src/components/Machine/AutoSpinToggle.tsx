@@ -1,10 +1,13 @@
 /** @jsxImportSource @emotion/react */
+import { keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useAtom, useAtomValue } from 'jotai';
+import { CSSProperties } from 'react';
 import {
   autospinActiveAtom,
   autospinDelayMsAtom,
   autospinUnlockedAtom,
+  autospinWaitingAtom,
 } from '../../state/autospin';
 import { theme } from '../../theme';
 
@@ -16,6 +19,8 @@ const Wrap = styled.div`
 `;
 
 const Pill = styled.button<{ active: boolean }>`
+  position: relative;
+  overflow: hidden;
   font-family: ${theme.font.mono};
   font-size: 10px;
   letter-spacing: 0.25em;
@@ -26,15 +31,46 @@ const Pill = styled.button<{ active: boolean }>`
   border-radius: 999px;
   padding: 5px 14px;
   cursor: pointer;
+  transition: border-color 120ms, color 120ms;
+
+  &:hover {
+    border-color: ${theme.color.gold};
+  }
+`;
+
+const fillSweep = keyframes`
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+`;
+
+/**
+ * The background fill. Anchored to the left edge and grows rightward
+ * via transform:scaleX over the autospin delay. Remounts every time
+ * `autospinWaitingAtom` flips back to true (parent conditional), so
+ * the animation starts fresh at the beginning of every cycle.
+ */
+const FillSweep = styled.span`
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(212, 160, 74, 0.22),
+    rgba(212, 160, 74, 0.32)
+  );
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: ${fillSweep} linear forwards;
+  animation-duration: var(--autospin-delay);
+  z-index: 0;
+  pointer-events: none;
+`;
+
+const Content = styled.span`
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 120ms;
-
-  &:hover {
-    background: rgba(212, 160, 74, 0.08);
-    border-color: ${theme.color.gold};
-  }
 `;
 
 const Dot = styled.span<{ active: boolean }>`
@@ -54,22 +90,32 @@ const Delay = styled.span`
 
 /**
  * Toggle for autospin on/off. Only renders when autospin is unlocked
- * (level >= 1). Shows the current delay inline so the player always
- * knows the cadence without opening the upgrade panel.
+ * (level >= 1). When autospin is waiting for the next pull, a gold
+ * sweep fills the pill from left to right at the same rate as the
+ * underlying setTimeout — a visible countdown that matches what the
+ * hook is actually doing.
  */
 export function AutoSpinToggle() {
   const unlocked = useAtomValue(autospinUnlockedAtom);
   const [active, setActive] = useAtom(autospinActiveAtom);
   const delayMs = useAtomValue(autospinDelayMsAtom);
+  const waiting = useAtomValue(autospinWaitingAtom);
 
   if (!unlocked) return null;
+
+  const fillStyle = {
+    ['--autospin-delay' as string]: `${delayMs}ms`,
+  } as CSSProperties;
 
   return (
     <Wrap>
       <Pill active={active} onClick={() => setActive(!active)}>
-        <Dot active={active} />
-        Auto · {active ? 'ON' : 'OFF'}
-        <Delay>({(delayMs / 1000).toFixed(1)}s)</Delay>
+        {waiting && <FillSweep key={delayMs} style={fillStyle} />}
+        <Content>
+          <Dot active={active} />
+          Auto · {active ? 'ON' : 'OFF'}
+          <Delay>({(delayMs / 1000).toFixed(1)}s)</Delay>
+        </Content>
       </Pill>
     </Wrap>
   );
