@@ -29,8 +29,6 @@ function globalEffectAtom(id: string) {
 }
 
 export const betAtom = globalEffectAtom('bet');
-export const autoPerTickAtom = globalEffectAtom('autospin');
-export const tickMsAtom = globalEffectAtom('speed');
 export const multiplierAtom = globalEffectAtom('multiplier');
 export const passiveAmountAtom = globalEffectAtom('passiveAmount');
 export const passiveRateMsAtom = globalEffectAtom('passiveRate');

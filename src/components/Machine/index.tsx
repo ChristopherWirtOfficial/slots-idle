@@ -11,6 +11,7 @@ import {
 import { jackpotsAtom } from '../../state/economy';
 import { ensureAudio } from '../../audio/engine';
 import { FloatingWin } from './FloatingWin';
+import { AutoSpinToggle } from './AutoSpinToggle';
 import { MachineCabinet } from './MachineCabinet';
 import { MachineHeader } from './MachineHeader';
 import { PaylineOverlay } from './PaylineOverlay';
@@ -122,6 +123,8 @@ export function Machine({
         spinning={spinning}
         onSpin={handlePull}
       />
+
+      <AutoSpinToggle />
 
       <WinSummary
         activeWin={spinning ? null : activeWin}

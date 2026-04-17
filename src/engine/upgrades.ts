@@ -49,23 +49,19 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
   {
     id: 'autospin',
     name: 'Auto-Spin Butler',
-    blurb: 'Spins on their own. Each level adds one spin per tick.',
+    blurb:
+      'Pulls the lever for you. Starts with a long pause between spins; each level shortens it.',
     baseCost: 300,
     costMult: 1.8,
     maxLevel: 10,
-    effect: (lvl) => lvl,
-    format: (lvl) => (lvl === 0 ? 'Disabled' : `${lvl} spin${lvl === 1 ? '' : 's'}/tick`),
-  },
-  {
-    id: 'speed',
-    name: 'Brass Clockwork',
-    blurb: 'Reduces auto-spin tick interval. Ticks go from 2s down to 0.2s.',
-    baseCost: 500,
-    costMult: 1.7,
-    maxLevel: 18,
-    effect: (lvl) => Math.max(200, 2000 - lvl * 100),
-    format: (lvl) =>
-      `${(Math.max(200, 2000 - lvl * 100) / 1000).toFixed(1)}s / tick`,
+    // Level 0 = disabled. Level 1 = 5.0s pause. Level 10 = 0.2s.
+    // Steps of ~533ms with the last step hitting the 200ms floor.
+    effect: (lvl) => (lvl === 0 ? 0 : Math.max(200, 5000 - (lvl - 1) * 534)),
+    format: (lvl) => {
+      if (lvl === 0) return 'Disabled';
+      const ms = Math.max(200, 5000 - (lvl - 1) * 534);
+      return `${(ms / 1000).toFixed(1)}s between spins`;
+    },
   },
   {
     id: 'multiplier',
