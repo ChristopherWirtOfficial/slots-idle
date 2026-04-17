@@ -2,6 +2,7 @@ import { atom } from 'jotai';
 import { GLOBAL_UPGRADES, costOf } from '../engine/upgrades';
 import { levelsAtom } from './levels';
 import { allUpgradesAtom } from './machine';
+import { cheatLuckAtom } from './cheats';
 
 /** Cost of the next level purchase per upgrade id (engine + machine). */
 export const costsAtom = atom((get) => {
@@ -28,9 +29,19 @@ function globalEffectAtom(id: string) {
 }
 
 export const betAtom = globalEffectAtom('bet');
-export const luckAtom = globalEffectAtom('luck');
 export const autoPerTickAtom = globalEffectAtom('autospin');
 export const tickMsAtom = globalEffectAtom('speed');
 export const multiplierAtom = globalEffectAtom('multiplier');
 export const passiveAmountAtom = globalEffectAtom('passiveAmount');
 export const passiveRateMsAtom = globalEffectAtom('passiveRate');
+
+/**
+ * Luck is the one effect atom with a cheat override. If cheatLuckAtom is
+ * set, it replaces the upgrade-derived value; otherwise the normal
+ * derivation applies.
+ */
+const luckFromUpgrades = globalEffectAtom('luck');
+export const luckAtom = atom((get) => {
+  const cheat = get(cheatLuckAtom);
+  return cheat !== null ? cheat : get(luckFromUpgrades);
+});

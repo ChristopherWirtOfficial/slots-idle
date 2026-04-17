@@ -15,6 +15,7 @@ import { useAnimationTick } from './hooks/useAnimationTick';
 import { useMasterVolume } from './hooks/useMasterVolume';
 import { useReelSync } from './hooks/useReelSync';
 import { VolumeControl } from './components/VolumeControl';
+import { CheatPanel } from './components/CheatPanel';
 
 import {
   chipsAtom,
@@ -232,6 +233,7 @@ export function App() {
     <>
       <Global styles={globalStyles} />
       <VolumeControl />
+      <CheatPanel />
       <Page>
         <TopBanner>
           <BrandLine>An evening's diversion</BrandLine>
