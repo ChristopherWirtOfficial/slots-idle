@@ -68,8 +68,10 @@ const Row = styled.button<{ affordable: boolean; maxed: boolean }>`
     transform: ${(p) => (p.affordable && !p.maxed ? 'translateX(2px)' : 'none')};
   }
 
-  &:disabled {
-    opacity: ${(p) => (p.maxed ? 0.7 : 0.5)};
+  /* Dim most content when disabled/unaffordable, but keep the cost
+   * readable — it's the key info driving "what am I saving for". */
+  &:disabled .dimOnDisabled {
+    opacity: ${(p) => (p.maxed ? 0.7 : 0.55)};
   }
 `;
 
@@ -119,7 +121,7 @@ const Effect = styled.span`
 `;
 
 const Cost = styled.span<{ affordable: boolean }>`
-  color: ${(p) => (p.affordable ? theme.color.goldBright : theme.color.oxbloodBright)};
+  color: ${(p) => (p.affordable ? theme.color.goldBright : '#e06a82')};
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -154,15 +156,21 @@ export function UpgradesPanel({ levels, costs, chips, onBuy }: UpgradesPanelProp
             onClick={() => affordable && onBuy(u.id)}
           >
             <RowTop>
-              <UpgradeName>{u.name}</UpgradeName>
-              <Level>Lv {lvl}{maxed ? ' · MAX' : ` / ${u.maxLevel}`}</Level>
+              <UpgradeName className="dimOnDisabled">{u.name}</UpgradeName>
+              <Level className="dimOnDisabled">
+                Lv {lvl}
+                {maxed ? ' · MAX' : ` / ${u.maxLevel}`}
+              </Level>
             </RowTop>
-            <Blurb>{u.blurb}</Blurb>
+            <Blurb className="dimOnDisabled">{u.blurb}</Blurb>
             <RowBottom>
-              <Effect>{effectLabel}</Effect>
+              <Effect className="dimOnDisabled">{effectLabel}</Effect>
               {!maxed && (
                 <Cost affordable={affordable}>
-                  {formatNum(cost)} <span css={css`color:${theme.color.ivoryDim};font-weight:400;`}>chips</span>
+                  {formatNum(cost)}{' '}
+                  <span css={css`color:${theme.color.ivoryDim};font-weight:400;`}>
+                    chips
+                  </span>
                 </Cost>
               )}
             </RowBottom>

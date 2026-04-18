@@ -132,21 +132,25 @@ const Layout = styled.div`
   grid-template-areas:
     'machine'
     'upgrades'
+    'paytable'
     'stats';
 
   @media (min-width: 760px) {
     max-width: 900px;
     grid-template-columns: 1.2fr 1fr;
     grid-template-areas:
-      'machine  upgrades'
-      'stats    upgrades';
+      'machine   upgrades'
+      'paytable  upgrades'
+      'stats     upgrades';
     align-items: start;
   }
 
   @media (min-width: 1100px) {
     max-width: 1280px;
     grid-template-columns: minmax(280px, 320px) minmax(auto, 500px) minmax(300px, 360px);
-    grid-template-areas: 'stats machine upgrades';
+    grid-template-areas:
+      'stats machine  upgrades'
+      'stats paytable upgrades';
     align-items: start;
   }
 `;
@@ -156,6 +160,11 @@ const MachineArea = styled.div`
   display: flex;
   flex-direction: column;
   gap: clamp(12px, 2.5vw, 20px);
+  min-width: 0;
+`;
+
+const PaytableArea = styled.div`
+  grid-area: paytable;
   min-width: 0;
 `;
 
@@ -267,7 +276,6 @@ export function App() {
               lastFloat={lastFloat}
               lastResult={lastResult}
             />
-            <Paytable />
           </MachineArea>
 
           <UpgradesArea>
@@ -278,6 +286,10 @@ export function App() {
               onBuy={doBuy}
             />
           </UpgradesArea>
+
+          <PaytableArea>
+            <Paytable />
+          </PaytableArea>
         </Layout>
 
         <Footer>Play responsibly · Saves to local storage</Footer>
