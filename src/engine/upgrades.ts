@@ -14,6 +14,50 @@ import { UpgradeDef } from './types';
  */
 export const GLOBAL_UPGRADES: UpgradeDef[] = [
   {
+    id: 'bet',
+    name: 'Table Stakes',
+    blurb: 'Raise your wager. Every 3rd level bumps the increment.',
+    baseCost: 35,
+    costMult: 1.5,
+    maxLevel: 8,
+    // Step-every-3: +1,+1,+1,+2,+2,+2,+3,+3 (sum 15 over 8 levels; bet = 1+sum)
+    effect: (lvl) => {
+      let sum = 0;
+      for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
+      return 1 + sum;
+    },
+    format: (lvl) => {
+      let sum = 0;
+      for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
+      return `Bet ${1 + sum} chips`;
+    },
+  },
+  {
+    id: 'multiplier',
+    name: 'House Favor',
+    blurb: 'Global payout multiplier. Each level is a 1.5× compounding boost.',
+    baseCost: 300,
+    costMult: 3.0,
+    maxLevel: 10,
+    effect: (lvl) => Math.pow(1.5, lvl),
+    format: (lvl) => `×${Math.pow(1.5, lvl).toFixed(2)} payouts`,
+  },
+  {
+    id: 'autospin',
+    name: 'Auto-Spin Butler',
+    blurb:
+      'Pulls the lever for you. Each level shortens the pause between spins.',
+    baseCost: 150,
+    costMult: 1.8,
+    maxLevel: 10,
+    effect: (lvl) => (lvl === 0 ? 0 : Math.max(200, 5000 - (lvl - 1) * 534)),
+    format: (lvl) => {
+      if (lvl === 0) return 'Disabled';
+      const ms = Math.max(200, 5000 - (lvl - 1) * 534);
+      return `${(ms / 1000).toFixed(1)}s between spins`;
+    },
+  },
+  {
     id: 'passiveAmount',
     name: 'House Gratuity',
     blurb: 'The floor staff slip you a chip between hands.',
@@ -35,29 +79,10 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
       `${(Math.max(5000, 10000 - lvl * 1500) / 1000).toFixed(1)}s / tick`,
   },
   {
-    id: 'bet',
-    name: 'Table Stakes',
-    blurb: 'Raise your wager. Every 3rd level bumps the increment.',
-    baseCost: 35,
-    costMult: 1.5,
-    maxLevel: 8,
-    // Step-every-3: +1,+1,+1,+2,+2,+2,+3,+3 (sum 15 over 8 levels; bet = 1+sum)
-    effect: (lvl) => {
-      let sum = 0;
-      for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
-      return 1 + sum;
-    },
-    format: (lvl) => {
-      let sum = 0;
-      for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
-      return `Bet ${1 + sum} chips`;
-    },
-  },
-  {
     id: 'luck',
     // DISABLED for now — will re-enable with different tuning or move
     // to prestige store. Kept defined so derive() still has a level-0
-    // reference.
+    // reference. Won't appear in UI (allUpgradesAtom filters maxLevel<=0).
     name: 'Crooked Dealer',
     blurb: 'Tilts the odds toward rarer symbols.',
     baseCost: 120,
@@ -65,31 +90,6 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
     maxLevel: 0,
     effect: (lvl) => lvl * 0.02,
     format: (lvl) => `+${(lvl * 2).toFixed(0)}% luck`,
-  },
-  {
-    id: 'autospin',
-    name: 'Auto-Spin Butler',
-    blurb:
-      'Pulls the lever for you. Each level shortens the pause between spins.',
-    baseCost: 150,
-    costMult: 1.8,
-    maxLevel: 10,
-    effect: (lvl) => (lvl === 0 ? 0 : Math.max(200, 5000 - (lvl - 1) * 534)),
-    format: (lvl) => {
-      if (lvl === 0) return 'Disabled';
-      const ms = Math.max(200, 5000 - (lvl - 1) * 534);
-      return `${(ms / 1000).toFixed(1)}s between spins`;
-    },
-  },
-  {
-    id: 'multiplier',
-    name: 'House Favor',
-    blurb: 'Global payout multiplier. Each level is a 1.5× compounding boost.',
-    baseCost: 300,
-    costMult: 3.0,
-    maxLevel: 10,
-    effect: (lvl) => Math.pow(1.5, lvl),
-    format: (lvl) => `×${Math.pow(1.5, lvl).toFixed(2)} payouts`,
   },
 ];
 
