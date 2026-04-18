@@ -17,15 +17,19 @@ export interface SimSymbol {
   payouts: Record<number, number>;
 }
 
-/** Classic-3x3 symbols. Ordered by rarity (common → rare). */
+/** Classic-3x3 symbols. Ordered by rarity (common → rare).
+ *
+ * Payouts tuned for ~290% base RTP on 5-payline 3x3 — "it's a game,
+ * not a real casino." Net chip flow per spin is ~1.9× bet.
+ */
 export const SYMBOLS: SimSymbol[] = [
-  { id: 'cherry',   weight: 40, payouts: { 3: 3,   4: 8,    5: 20 } },
-  { id: 'lemon',    weight: 35, payouts: { 3: 4,   4: 12,   5: 30 } },
-  { id: 'plum',     weight: 28, payouts: { 3: 7,   4: 20,   5: 50 } },
-  { id: 'bell',     weight: 18, payouts: { 3: 12,  4: 35,   5: 90 } },
-  { id: 'star',     weight: 10, payouts: { 3: 28,  4: 80,   5: 200 } },
-  { id: 'diamond',  weight: 5,  payouts: { 3: 65,  4: 180,  5: 450 } },
-  { id: 'seven',    weight: 2,  payouts: { 3: 250, 4: 700,  5: 1800 } },
+  { id: 'cherry',   weight: 40, payouts: { 3: 7,   4: 20,   5: 50 } },
+  { id: 'lemon',    weight: 35, payouts: { 3: 10,  4: 30,   5: 75 } },
+  { id: 'plum',     weight: 28, payouts: { 3: 18,  4: 50,   5: 125 } },
+  { id: 'bell',     weight: 18, payouts: { 3: 30,  4: 90,   5: 225 } },
+  { id: 'star',     weight: 10, payouts: { 3: 60,  4: 170,  5: 425 } },
+  { id: 'diamond',  weight: 5,  payouts: { 3: 140, 4: 400,  5: 1000 } },
+  { id: 'seven',    weight: 2,  payouts: { 3: 500, 4: 1500, 5: 3750 } },
 ];
 
 /**
