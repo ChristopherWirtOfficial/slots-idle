@@ -30,9 +30,14 @@ export const symbolsAtom = atom((get) => get(resolvedConfigAtom).symbols);
 /**
  * Merged upgrade list: engine globals + the active machine's contribution.
  * Ids are assumed not to collide between sources.
+ *
+ * Upgrades with maxLevel <= 0 are filtered out — this is how we
+ * "disable" an upgrade (e.g., locking content behind prestige) without
+ * deleting its definition. The definition stays available for
+ * derive() and any other math that references its effect at level 0.
  */
 export const allUpgradesAtom = atom((get) => {
   const machine = get(activeMachineAtom);
   const machineUpgrades: UpgradeDef[] = machine.upgrades ?? [];
-  return [...GLOBAL_UPGRADES, ...machineUpgrades];
+  return [...GLOBAL_UPGRADES, ...machineUpgrades].filter((u) => u.maxLevel > 0);
 });

@@ -6,8 +6,11 @@ import { highlightsForWin } from './highlights';
 
 const BASE_REEL_COUNT = 3;
 const BASE_ROW_COUNT = 3;
-const MAX_REEL_COUNT = 5;
-const MAX_ROW_COUNT = 4;
+// Reserved for prestige-store unlocks (extraReel/extraRow).
+// Unused at level 0 cap; keeping the shape of the machine's intended
+// growth space documented.
+// const MAX_REEL_COUNT = 5;
+// const MAX_ROW_COUNT = 4;
 
 /**
  * Machine-specific upgrades. Merged with engine globals by the engine.
@@ -21,7 +24,9 @@ const CLASSIC_UPGRADES: UpgradeDef[] = [
     blurb: 'Add another reel to the machine. Paylines extend; bigger matches unlock higher payouts.',
     baseCost: 15000,
     costMult: 4,
-    maxLevel: MAX_REEL_COUNT - BASE_REEL_COUNT,
+    // maxLevel 0 = DISABLED for current playtest. This is becoming a
+    // prestige-store unlock, not a base-run upgrade. See DESIGN_NOTES.md.
+    maxLevel: 0,
     effect: (lvl) => BASE_REEL_COUNT + lvl,
     format: (lvl) => `${BASE_REEL_COUNT + lvl} reels`,
   },
@@ -31,7 +36,7 @@ const CLASSIC_UPGRADES: UpgradeDef[] = [
     blurb: 'Add a row to the machine. More symbols visible; the middle row recenters.',
     baseCost: 25000,
     costMult: 5,
-    maxLevel: MAX_ROW_COUNT - BASE_ROW_COUNT,
+    maxLevel: 0,
     effect: (lvl) => BASE_ROW_COUNT + lvl,
     format: (lvl) => `${BASE_ROW_COUNT + lvl} rows`,
   },

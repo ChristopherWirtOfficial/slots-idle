@@ -87,13 +87,13 @@ export const UPGRADES: SimUpgrade[] = [
   // bet: cheap base, step-every-3 effect pattern — "felt moments" at every
   //   third level. Moderate cost scaling. The "leveraged" lever: big wins
   //   AND big dry-streak cost.
-  { id: 'bet',            baseCost: 35,   costMult: 1.5,  maxLevel: 50, effect: betEffect,                                    role: 'bet' },
+  { id: 'bet',            baseCost: 35,   costMult: 1.5,  maxLevel: 8,  effect: betEffect,                                    role: 'bet' },
   // luck DISABLED for current tuning pass.
   { id: 'luck',           baseCost: 120,  costMult: 1.6,  maxLevel: 0,  effect: (l) => l * 0.02,                              role: 'luck' },
   // multiplier: 1.5^level effect. costMult 2.4 produces ratio shift of
   //   1.5/2.4 = 0.625 per level (each buy 37% worse value than last).
   //   Plateau behavior, tunable without blowing up.
-  { id: 'multiplier',     baseCost: 200,  costMult: 2.4,  maxLevel: 30, effect: (l) => Math.pow(1.5, l),                      role: 'multiplier' },
+  { id: 'multiplier',     baseCost: 300,  costMult: 3.0,  maxLevel: 10, effect: (l) => Math.pow(1.5, l),                      role: 'multiplier' },
   // Passive income — floor is on (1 chip / 10s baseline at level 0), but
   // upgrades are disabled. Role here is strictly anti-softlock insurance,
   // not an income driver.

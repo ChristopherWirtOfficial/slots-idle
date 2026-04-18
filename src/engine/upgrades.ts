@@ -4,46 +4,65 @@ import { UpgradeDef } from './types';
 /**
  * Engine-level (global) upgrades. Machines contribute their own via
  * Machine.upgrades; the engine merges both lists for UI + purchasing.
+ *
+ * Current tuning (post sim work): targets ~90m plateau for fast players,
+ * ~2h for slow. Cost curves designed so ETA-to-next-upgrade stays flat
+ * ~50s for first 80 min then inflects upward sharply. See /sim.
+ *
+ * Upgrades with maxLevel=0 are content-gated (prestige store, future
+ * machines, etc) — the filter in allUpgradesAtom hides them from UI.
  */
 export const GLOBAL_UPGRADES: UpgradeDef[] = [
   {
     id: 'passiveAmount',
     name: 'House Gratuity',
     blurb: 'The floor staff slip you a chip between hands.',
-    baseCost: 50,
-    costMult: 1.55,
-    maxLevel: 10,
+    baseCost: 80,
+    costMult: 2.0,
+    maxLevel: 3,
     effect: (lvl) => 1 + lvl,
     format: (lvl) => `+${1 + lvl} chip${1 + lvl === 1 ? '' : 's'} / tick`,
   },
   {
     id: 'passiveRate',
     name: 'Brisk Service',
-    blurb: 'Shorter pours, more frequent tips. 10s baseline down to 2s.',
-    baseCost: 120,
-    costMult: 1.6,
-    maxLevel: 16,
-    effect: (lvl) => Math.max(2000, 10000 - lvl * 500),
+    blurb: 'Shorter pours, more frequent tips.',
+    baseCost: 150,
+    costMult: 2.0,
+    maxLevel: 3,
+    effect: (lvl) => Math.max(5000, 10000 - lvl * 1500),
     format: (lvl) =>
-      `${(Math.max(2000, 10000 - lvl * 500) / 1000).toFixed(1)}s / tick`,
+      `${(Math.max(5000, 10000 - lvl * 1500) / 1000).toFixed(1)}s / tick`,
   },
   {
     id: 'bet',
     name: 'Table Stakes',
-    blurb: 'Raise your base wager. Bigger bets, bigger payouts.',
-    baseCost: 50,
-    costMult: 1.45,
-    maxLevel: 50,
-    effect: (lvl) => 1 + lvl,
-    format: (lvl) => `Bet ${1 + lvl} chips`,
+    blurb: 'Raise your wager. Every 3rd level bumps the increment.',
+    baseCost: 35,
+    costMult: 1.5,
+    maxLevel: 8,
+    // Step-every-3: +1,+1,+1,+2,+2,+2,+3,+3 (sum 15 over 8 levels; bet = 1+sum)
+    effect: (lvl) => {
+      let sum = 0;
+      for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
+      return 1 + sum;
+    },
+    format: (lvl) => {
+      let sum = 0;
+      for (let k = 1; k <= lvl; k++) sum += Math.ceil(k / 3);
+      return `Bet ${1 + sum} chips`;
+    },
   },
   {
     id: 'luck',
+    // DISABLED for now — will re-enable with different tuning or move
+    // to prestige store. Kept defined so derive() still has a level-0
+    // reference.
     name: 'Crooked Dealer',
-    blurb: 'Tilts the odds toward rarer symbols. +2% luck per level.',
+    blurb: 'Tilts the odds toward rarer symbols.',
     baseCost: 120,
     costMult: 1.6,
-    maxLevel: 25,
+    maxLevel: 0,
     effect: (lvl) => lvl * 0.02,
     format: (lvl) => `+${(lvl * 2).toFixed(0)}% luck`,
   },
@@ -51,12 +70,10 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
     id: 'autospin',
     name: 'Auto-Spin Butler',
     blurb:
-      'Pulls the lever for you. Starts with a long pause between spins; each level shortens it.',
-    baseCost: 300,
+      'Pulls the lever for you. Each level shortens the pause between spins.',
+    baseCost: 150,
     costMult: 1.8,
     maxLevel: 10,
-    // Level 0 = disabled. Level 1 = 5.0s pause. Level 10 = 0.2s.
-    // Steps of ~533ms with the last step hitting the 200ms floor.
     effect: (lvl) => (lvl === 0 ? 0 : Math.max(200, 5000 - (lvl - 1) * 534)),
     format: (lvl) => {
       if (lvl === 0) return 'Disabled';
@@ -67,12 +84,12 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
   {
     id: 'multiplier',
     name: 'House Favor',
-    blurb: 'Global payout multiplier. +10% winnings per level.',
-    baseCost: 1000,
-    costMult: 1.9,
-    maxLevel: 30,
-    effect: (lvl) => 1 + lvl * 0.1,
-    format: (lvl) => `×${(1 + lvl * 0.1).toFixed(1)} payouts`,
+    blurb: 'Global payout multiplier. Each level is a 1.5× compounding boost.',
+    baseCost: 300,
+    costMult: 3.0,
+    maxLevel: 10,
+    effect: (lvl) => Math.pow(1.5, lvl),
+    format: (lvl) => `×${Math.pow(1.5, lvl).toFixed(2)} payouts`,
   },
 ];
 
