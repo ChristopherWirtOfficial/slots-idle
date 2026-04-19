@@ -27,19 +27,42 @@ export function rollDistanceCells(rng: () => number = Math.random): number {
   );
 }
 
-/** Ease-out quintic: f(t) = 1 - (1-t)^5. */
+/**
+ * Fraction of the underlying quintic easeOut curve that the visible
+ * animation actually uses. The asymptotic tail past this point is
+ * truncated — without it, the reel spends the last ~30% of its
+ * duration drifting imperceptibly into place while the audio/payout
+ * events wait on the technical end-of-animation. With it, visible
+ * motion persists right up to t=1 and the events fire in sync with
+ * what the eye sees.
+ *
+ * Lower value = less tail = crisper landing. 0.55 keeps ~10px of
+ * visible drift in the last 200ms so it still feels like a settle,
+ * not a snap.
+ */
+const SETTLE_FRACTION = 0.55;
+
+/** easeOut(SETTLE_FRACTION) in the base quintic, precomputed. */
+const SETTLE_NORM = 1 - Math.pow(1 - SETTLE_FRACTION, 5);
+
+/**
+ * Ease-out quintic, truncated past SETTLE_FRACTION. Reaches 1 at t=1
+ * with visible motion still present in the final frames.
+ *
+ *   f(t) = easeOut_quintic(t * SETTLE_FRACTION) / easeOut_quintic(SETTLE_FRACTION)
+ */
 export function easeOut(t: number): number {
   if (t >= 1) return 1;
   if (t <= 0) return 0;
-  const inv = 1 - t;
-  return 1 - inv * inv * inv * inv * inv;
+  const inv = 1 - t * SETTLE_FRACTION;
+  return (1 - inv * inv * inv * inv * inv) / SETTLE_NORM;
 }
 
-/** Derivative of easeOut at t. */
+/** Derivative of easeOut at t. Scales with SETTLE_FRACTION via chain rule. */
 export function easeOutPrime(t: number): number {
   if (t >= 1 || t <= 0) return 0;
-  const inv = 1 - t;
-  return 5 * inv * inv * inv * inv;
+  const inv = 1 - t * SETTLE_FRACTION;
+  return (SETTLE_FRACTION * 5 * inv * inv * inv * inv) / SETTLE_NORM;
 }
 
 /** Instantaneous spin velocity in cells-per-frame at 60fps. */
