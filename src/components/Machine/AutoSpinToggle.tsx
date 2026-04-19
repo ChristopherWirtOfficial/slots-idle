@@ -83,9 +83,14 @@ const Dot = styled.span<{ active: boolean }>`
 `;
 
 const Delay = styled.span`
-  font-size: 9px;
-  opacity: 0.7;
-  letter-spacing: 0.15em;
+  /* Override the pill's uppercase so the unit "s" reads as a unit,
+   * not as an ambiguous capital after a period. Parens removed —
+   * visual separator is the same middle-dot the ON/OFF uses. */
+  text-transform: none;
+  font-size: 10px;
+  opacity: 0.6;
+  letter-spacing: 0.1em;
+  margin-left: 2px;
 `;
 
 /**
@@ -114,7 +119,7 @@ export function AutoSpinToggle() {
         <Content>
           <Dot active={active} />
           Auto · {active ? 'ON' : 'OFF'}
-          <Delay>({(delayMs / 1000).toFixed(1)}s)</Delay>
+          <Delay>· {(delayMs / 1000).toFixed(1)}s</Delay>
         </Content>
       </Pill>
     </Wrap>
