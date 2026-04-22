@@ -2,8 +2,12 @@
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import Decimal from 'break_infinity.js';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { allUpgradesAtom } from '../state/machine';
+import { chipsAtom } from '../state/economy';
+import { levelsAtom } from '../state/levels';
+import { costsAtom } from '../state/upgrades';
+import { buyUpgradeAtom } from '../state/actions';
 import { theme } from '../theme';
 import { formatNum } from '../util/format';
 
@@ -127,15 +131,12 @@ const Cost = styled.span<{ affordable: boolean }>`
   letter-spacing: 0.05em;
 `;
 
-interface UpgradesPanelProps {
-  levels: Record<string, number>;
-  costs: Record<string, Decimal>;
-  chips: Decimal;
-  onBuy: (id: string) => void;
-}
-
-export function UpgradesPanel({ levels, costs, chips, onBuy }: UpgradesPanelProps) {
+export function UpgradesPanel() {
   const upgrades = useAtomValue(allUpgradesAtom);
+  const levels = useAtomValue(levelsAtom);
+  const costs = useAtomValue(costsAtom);
+  const chips = useAtomValue(chipsAtom);
+  const onBuy = useSetAtom(buyUpgradeAtom);
   return (
     <Panel>
       <PanelTitle>The Parlour</PanelTitle>

@@ -2,10 +2,7 @@ import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { GLOBAL_UPGRADES } from '../engine/upgrades';
 import { levelsAtom } from './levels';
-import { anyReelSpinningAtom } from './reels';
-import { pendingResultAtom } from './session';
-import { chipsAtom } from './economy';
-import { currentBetAtom } from './upgrades';
+import { canSpinAtom } from './canSpin';
 
 /**
  * Autospin-specific state. Grouped here because it's a self-contained
@@ -58,9 +55,5 @@ export const autospinEffectiveAtom = atom((get) => {
  * indicator) read this so they agree on what "waiting" means.
  */
 export const autospinWaitingAtom = atom((get) => {
-  if (!get(autospinEffectiveAtom)) return false;
-  if (get(anyReelSpinningAtom)) return false;
-  if (get(pendingResultAtom) !== null) return false;
-  if (get(chipsAtom).lt(get(currentBetAtom))) return false;
-  return true;
+  return get(autospinEffectiveAtom) && get(canSpinAtom);
 });

@@ -44,6 +44,7 @@ import {
   reelAtomsAtom,
 } from '../reels';
 import Decimal from 'break_infinity.js';
+import { canSpinAtom } from '../canSpin';
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -99,12 +100,10 @@ function winTier(result: SpinResult, bet: number): WinTier {
 
 /** Starts a spin. Payout commits when the last reel lands (see animationTickAtom). */
 export const spinActionAtom = atom(null, (get, set) => {
-  if (get(anyReelSpinningAtom)) return;
-  if (get(pendingResultAtom) !== null) return;
+  if (!get(canSpinAtom)) return;
 
   const bet = get(currentBetAtom);
   const chipsBefore = get(chipsAtom);
-  if (chipsBefore.lt(bet)) return;
 
   const machine = get(activeMachineAtom);
   const config: ResolvedMachineConfig = get(resolvedConfigAtom);

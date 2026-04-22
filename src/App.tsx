@@ -2,7 +2,6 @@
 import { Global, css } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useEffect } from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
 import { Machine } from './components/Machine';
 import { UpgradesPanel } from './components/UpgradesPanel';
 import { StatsPanel } from './components/StatsPanel';
@@ -15,37 +14,6 @@ import { useAnimationTick } from './hooks/useAnimationTick';
 import { useReelSync } from './hooks/useReelSync';
 import { VolumeControl } from './components/VolumeControl';
 import { CheatPanel } from './components/CheatPanel';
-
-import {
-  chipsAtom,
-  jackpotsAtom,
-  lifetimeWinningsAtom,
-  spinsTotalAtom,
-  totalEverWonAtom,
-} from './state/economy';
-import { levelsAtom } from './state/levels';
-import {
-  costsAtom,
-  currentBetAtom,
-  passiveAmountAtom,
-  passiveRateMsAtom,
-} from './state/upgrades';
-import {
-  globalMultAtom,
-  highRollerPointsAtom,
-  prestigePendingAtom,
-} from './state/prestige';
-import {
-  lastFloatAtom,
-  lastResultAtom,
-} from './state/session';
-import { anyReelSpinningAtom } from './state/reels';
-import {
-  buyUpgradeAtom,
-  prestigeActionAtom,
-  resetActionAtom,
-  spinActionAtom,
-} from './state/actions';
 
 const globalStyles = css`
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Cormorant+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -187,6 +155,16 @@ const Footer = styled.footer`
   padding-top: 20px;
 `;
 
+/**
+ * App root. Responsibilities:
+ *  - Global CSS (emotion <Global>)
+ *  - Top-level lifecycle hooks (tick loop, animation, reel sync, etc)
+ *  - Fixed-position chrome (volume control, cheat panel)
+ *  - Page layout structure
+ *
+ * Everything else — state, actions, game logic — lives in the panel
+ * components, which read atoms directly. App doesn't drill props.
+ */
 export function App() {
   // Start the tick loop once on mount.
   useEffect(() => {
@@ -206,34 +184,6 @@ export function App() {
   // Fills initial windows on mount and handles topology changes from upgrades.
   useReelSync();
 
-  const chips = useAtomValue(chipsAtom);
-  const lifetimeWinnings = useAtomValue(lifetimeWinningsAtom);
-  const totalEverWon = useAtomValue(totalEverWonAtom);
-  const spinsTotal = useAtomValue(spinsTotalAtom);
-  const jackpots = useAtomValue(jackpotsAtom);
-  const levels = useAtomValue(levelsAtom);
-  const costs = useAtomValue(costsAtom);
-  const bet = useAtomValue(currentBetAtom);
-  const globalMult = useAtomValue(globalMultAtom);
-  const hrp = useAtomValue(highRollerPointsAtom);
-  const prestigePending = useAtomValue(prestigePendingAtom);
-  const passiveAmount = useAtomValue(passiveAmountAtom);
-  const passiveRateMs = useAtomValue(passiveRateMsAtom);
-  const isSpinning = useAtomValue(anyReelSpinningAtom);
-  const lastResult = useAtomValue(lastResultAtom);
-  const lastFloat = useAtomValue(lastFloatAtom);
-
-  const doSpin = useSetAtom(spinActionAtom);
-  const doBuy = useSetAtom(buyUpgradeAtom);
-  const doPrestige = useSetAtom(prestigeActionAtom);
-  const doReset = useSetAtom(resetActionAtom);
-
-  const canSpin = !isSpinning && chips.gte(bet);
-
-  const handleReset = () => {
-    if (confirm('Erase everything? No takebacks.')) doReset();
-  };
-
   return (
     <>
       <Global styles={globalStyles} />
@@ -247,40 +197,15 @@ export function App() {
 
         <Layout>
           <StatsArea>
-            <StatsPanel
-              chips={chips}
-              lifetimeWinnings={lifetimeWinnings}
-              totalEverWon={totalEverWon}
-              spinsTotal={spinsTotal}
-              jackpots={jackpots}
-              highRollerPoints={hrp}
-              prestigePending={prestigePending}
-              globalMult={globalMult}
-              passiveAmount={passiveAmount}
-              passiveRateMs={passiveRateMs}
-              onPrestige={doPrestige}
-              onReset={handleReset}
-            />
+            <StatsPanel />
           </StatsArea>
 
           <MachineArea>
-            <Machine
-              spinning={isSpinning}
-              bet={bet}
-              canSpin={canSpin}
-              onSpin={doSpin}
-              lastFloat={lastFloat}
-              lastResult={lastResult}
-            />
+            <Machine />
           </MachineArea>
 
           <UpgradesArea>
-            <UpgradesPanel
-              levels={levels}
-              costs={costs}
-              chips={chips}
-              onBuy={doBuy}
-            />
+            <UpgradesPanel />
           </UpgradesArea>
 
           <PaytableArea>

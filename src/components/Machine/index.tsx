@@ -3,8 +3,6 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import Decimal from 'break_infinity.js';
 import { useEffect, useRef, useState } from 'react';
 import { Reel } from '../Reel';
-import { SpinResult } from '../../engine/types';
-import { FloatEvent } from '../../state/session';
 import {
   activeMachineAtom,
   reelCountAtom,
@@ -12,6 +10,15 @@ import {
 } from '../../state/machine';
 import { jackpotsAtom } from '../../state/economy';
 import { ensureAudioReadyAtom } from '../../state/audio';
+import { currentBetAtom } from '../../state/upgrades';
+import { anyReelSpinningAtom } from '../../state/reels';
+import { canSpinAtom } from '../../state/canSpin';
+import {
+  FloatEvent,
+  lastFloatAtom,
+  lastResultAtom,
+} from '../../state/session';
+import { spinActionAtom } from '../../state/actions';
 import { FloatingWin } from './FloatingWin';
 import { AutoSpinToggle } from './AutoSpinToggle';
 import { CreditBar } from './CreditBar';
@@ -29,28 +36,17 @@ const JACKPOT_SHAKE_MS = 700;
 const FLOAT_TOAST_MS = 1400;
 const BIG_WIN_BET_MULTIPLIER = 10;
 
-interface MachineProps {
-  spinning: boolean;
-  /** Used to compute the big-win threshold for the floating toast. */
-  bet: number;
-  canSpin: boolean;
-  onSpin: () => void;
-  lastFloat: FloatEvent | null;
-  lastResult: SpinResult | null;
-}
-
-export function Machine({
-  spinning,
-  bet,
-  canSpin,
-  onSpin,
-  lastFloat,
-  lastResult,
-}: MachineProps) {
+export function Machine() {
   const machine = useAtomValue(activeMachineAtom);
   const config = useAtomValue(resolvedConfigAtom);
   const reelCount = useAtomValue(reelCountAtom);
   const jackpots = useAtomValue(jackpotsAtom);
+  const bet = useAtomValue(currentBetAtom);
+  const spinning = useAtomValue(anyReelSpinningAtom);
+  const canSpin = useAtomValue(canSpinAtom);
+  const lastResult = useAtomValue(lastResultAtom);
+  const lastFloat = useAtomValue(lastFloatAtom);
+  const onSpin = useSetAtom(spinActionAtom);
   const ensureAudioReady = useSetAtom(ensureAudioReadyAtom);
 
   // --- Grid geometry for overlay positioning ---
@@ -78,7 +74,7 @@ export function Machine({
   }, [jackpots]);
 
   // --- Floating win toast lifecycle (key'd by lastFloat.id) ---
-  const [visibleFloat, setVisibleFloat] = useState<MachineProps['lastFloat']>(null);
+  const [visibleFloat, setVisibleFloat] = useState<FloatEvent | null>(null);
   useEffect(() => {
     if (!lastFloat) return;
     setVisibleFloat(lastFloat);

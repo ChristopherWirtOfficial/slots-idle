@@ -1,9 +1,25 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
-import Decimal from 'break_infinity.js';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { theme } from '../theme';
 import { prestigeMultiplier } from '../engine/upgrades';
 import { formatNum } from '../util/format';
+import {
+  jackpotsAtom,
+  lifetimeWinningsAtom,
+  spinsTotalAtom,
+  totalEverWonAtom,
+} from '../state/economy';
+import {
+  globalMultAtom,
+  highRollerPointsAtom,
+  prestigePendingAtom,
+} from '../state/prestige';
+import {
+  passiveAmountAtom,
+  passiveRateMsAtom,
+} from '../state/upgrades';
+import { prestigeActionAtom, resetActionAtom } from '../state/actions';
 
 const Panel = styled.aside`
   background: linear-gradient(180deg, ${theme.color.velvet}, ${theme.color.bgDeep});
@@ -129,35 +145,24 @@ const ResetBtn = styled.button`
   &:hover { color: ${theme.color.oxbloodBright}; }
 `;
 
-interface StatsProps {
-  chips: Decimal;
-  lifetimeWinnings: Decimal;
-  totalEverWon: Decimal;
-  spinsTotal: number;
-  jackpots: number;
-  highRollerPoints: Decimal;
-  prestigePending: Decimal;
-  globalMult: Decimal;
-  /** Passive income per tick — stays a plain number (small-bounded). */
-  passiveAmount: number;
-  passiveRateMs: number;
-  onPrestige: () => void;
-  onReset: () => void;
-}
+export function StatsPanel() {
+  const lifetimeWinnings = useAtomValue(lifetimeWinningsAtom);
+  const totalEverWon = useAtomValue(totalEverWonAtom);
+  const spinsTotal = useAtomValue(spinsTotalAtom);
+  const jackpots = useAtomValue(jackpotsAtom);
+  const highRollerPoints = useAtomValue(highRollerPointsAtom);
+  const prestigePending = useAtomValue(prestigePendingAtom);
+  const globalMult = useAtomValue(globalMultAtom);
+  const passiveAmount = useAtomValue(passiveAmountAtom);
+  const passiveRateMs = useAtomValue(passiveRateMsAtom);
 
-export function StatsPanel({
-  lifetimeWinnings,
-  totalEverWon,
-  spinsTotal,
-  jackpots,
-  highRollerPoints,
-  prestigePending,
-  globalMult,
-  passiveAmount,
-  passiveRateMs,
-  onPrestige,
-  onReset,
-}: StatsProps) {
+  const doPrestige = useSetAtom(prestigeActionAtom);
+  const doReset = useSetAtom(resetActionAtom);
+
+  const onReset = () => {
+    if (confirm('Erase everything? No takebacks.')) doReset();
+  };
+
   const hrpReady = prestigePending.gt(0);
   const nextMult = prestigeMultiplier(highRollerPoints.add(prestigePending));
   const chipsPerSec = passiveAmount / (passiveRateMs / 1000);
@@ -186,7 +191,7 @@ export function StatsPanel({
         </PrestigeBlurb>
         <PrestigeButton
           disabled={!hrpReady}
-          onClick={() => hrpReady && onPrestige()}
+          onClick={() => hrpReady && doPrestige()}
         >
           {hrpReady ? `Cash out · +${formatNum(prestigePending)}` : 'Locked'}
         </PrestigeButton>
