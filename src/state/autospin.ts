@@ -5,7 +5,7 @@ import { levelsAtom } from './levels';
 import { anyReelSpinningAtom } from './reels';
 import { pendingResultAtom } from './session';
 import { chipsAtom } from './economy';
-import { betAtom } from './upgrades';
+import { currentBetAtom } from './upgrades';
 
 /**
  * Autospin-specific state. Grouped here because it's a self-contained
@@ -61,6 +61,6 @@ export const autospinWaitingAtom = atom((get) => {
   if (!get(autospinEffectiveAtom)) return false;
   if (get(anyReelSpinningAtom)) return false;
   if (get(pendingResultAtom) !== null) return false;
-  if (get(chipsAtom).lt(get(betAtom))) return false;
+  if (get(chipsAtom).lt(get(currentBetAtom))) return false;
   return true;
 });

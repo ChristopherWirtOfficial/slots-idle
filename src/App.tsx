@@ -25,8 +25,8 @@ import {
 } from './state/economy';
 import { levelsAtom } from './state/levels';
 import {
-  betAtom,
   costsAtom,
+  currentBetAtom,
   passiveAmountAtom,
   passiveRateMsAtom,
 } from './state/upgrades';
@@ -213,7 +213,7 @@ export function App() {
   const jackpots = useAtomValue(jackpotsAtom);
   const levels = useAtomValue(levelsAtom);
   const costs = useAtomValue(costsAtom);
-  const bet = useAtomValue(betAtom);
+  const bet = useAtomValue(currentBetAtom);
   const globalMult = useAtomValue(globalMultAtom);
   const hrp = useAtomValue(highRollerPointsAtom);
   const prestigePending = useAtomValue(prestigePendingAtom);

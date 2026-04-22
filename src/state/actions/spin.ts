@@ -27,7 +27,7 @@ import {
   totalEverWonAtom,
 } from '../economy';
 import { activeMachineAtom, resolvedConfigAtom } from '../machine';
-import { betAtom, luckAtom } from '../upgrades';
+import { currentBetAtom, luckAtom } from '../upgrades';
 import { globalMultAtom } from '../prestige';
 import { lastFloatAtom, lastResultAtom, pendingResultAtom } from '../session';
 import {
@@ -89,7 +89,7 @@ export const spinActionAtom = atom(null, (get, set) => {
   if (get(anyReelSpinningAtom)) return;
   if (get(pendingResultAtom) !== null) return;
 
-  const bet = get(betAtom);
+  const bet = get(currentBetAtom);
   const chipsBefore = get(chipsAtom);
   if (chipsBefore.lt(bet)) return;
 
@@ -169,7 +169,7 @@ export const animationTickAtom = atom(null, (get, set) => {
   if (pending.hasJackpot) set(jackpotsAtom, get(jackpotsAtom) + 1);
   set(pendingResultAtom, null);
 
-  const tier = winTier(pending, get(betAtom));
+  const tier = winTier(pending, get(currentBetAtom));
   if (tier === 'jackpot') window.setTimeout(sfxJackpot, 120);
   else if (tier === 'big') window.setTimeout(sfxBigWin, 100);
   else if (tier === 'small') window.setTimeout(sfxSmallWin, 80);
