@@ -8,6 +8,14 @@ interface AudioEngine {
 
 let engine: AudioEngine | null = null;
 
+/**
+ * The desired master gain, tracked outside the engine so it survives
+ * before the engine exists. setMasterGain writes here regardless of
+ * engine state; ensureAudio reads it when creating the master node.
+ * Default of 0.5 only applies if no one has set a value yet.
+ */
+let currentTargetGain = 0.5;
+
 export function ensureAudio(): AudioEngine | null {
   if (engine) return engine;
   try {
@@ -15,7 +23,7 @@ export function ensureAudio(): AudioEngine | null {
     if (!Ctx) return null;
     const ctx = new Ctx();
     const master = ctx.createGain();
-    master.gain.value = 0.5;
+    master.gain.value = currentTargetGain;
     master.connect(ctx.destination);
     engine = { ctx, master };
     return engine;
@@ -45,6 +53,9 @@ export function sliderToGain(s: number): number {
 }
 
 export function setMasterGain(gain: number): void {
+  // Always record the target — useMasterVolume may fire before the
+  // engine is alive, and we need that value at engine-init time.
+  currentTargetGain = gain;
   if (!engine) return;
   const t = engine.ctx.currentTime;
   // Short ramp to avoid clicks when moving the slider
