@@ -15,24 +15,73 @@ Kept here so they don't get lost between sessions.
 - Subsequent prestige runs are shorter — the permanent progression
   compounds. Each run is a faster lap of the same arc.
 
-## Prestige system (deferred, not yet designed)
+## Prestige system
 
-Direction but not detail:
+### Pinned decisions
 
-- Its own currency, not a pure multiplier. Spend in a store.
-- Store contains upgrades that persist across runs.
-- Milestones on prestige count: e.g. "P2 milestone unlocks permanent
-  autospin tier 1" — progression layers beyond the currency itself.
-- Unlocks potentially include:
-  - Permanent autospin t1 from milestone (e.g. P2)
-  - First extraReel or extraRow as a prestige-store purchase (maybe P1)
-  - New payline shapes as card-pack-style pulls (upgrade existing
-    lines, unlock entirely new ones)
-  - Other structural unlocks TBD
+**Currency**: prestige earns points (working name TBD). Points are spent
+on a store AND on card packs. Shared economy — card packs compete with
+store upgrades for spend. This tension is the main "what am I doing
+this prestige" decision.
 
-Paylines-as-cards is a strong idea worth preserving — slots usually
-treat paylines as a fixed asset; turning them into collectible
-content gives real strategy space that isn't just numbers-go-up.
+**Points formula**: `points = floor((lifetimeChips / K) ^ exp)` where
+`exp` is a tunable constant starting at 1.0 (linear). Superlinear
+(1.05-1.1) is the dial for "reward plateau-pushing" when we want it.
+Leaving at 1.0 for initial tuning — undertune prestige slightly at
+first; it's easier to buff than to nerf.
+
+**Store = cost-reduction tracks**, one per upgrade. Each track's effect:
+`effectiveCost = baseCost / (1 + r × k)` where r is track level,
+k is a per-upgrade scalar. Divisor math (never hits zero, always
+buyable), percent display in the UI (reads as "−45% bet cost"). Idiom
+matches Cookie Clicker / Antimatter Dimensions / Trimps.
+
+Cost reductions serve double duty: (a) accelerate subsequent runs
+back to where you were; (b) let you push further into the exponential
+cost curve than an un-prestiged player could.
+
+**Milestones** on prestige count unlock abilities/content distinct
+from store purchases. Early milestones are permanent versions of
+things currently in the base game:
+- Permanent autospin (some tier) at a specific prestige count
+- First extraReel / extraRow at a specific prestige count
+- Possibly: new symbol, new payline tier, etc.
+
+**Card packs**: bought with prestige points. Cards are the deepest
+permanent layer of the game — survive EVEN a future meta-prestige
+("reset everything but your cards") that resets the store.
+Paylines-as-cards is the strong anchoring idea. Cards potentially
+also govern symbol payouts, wild probability, etc.
+
+### Open questions (decide later)
+
+- Do bet/multi keep max levels, or go uncapped and rely on the steep
+  cost curve to plateau naturally? Clean split would be:
+  - Numerical upgrades (bet, multi, passive amt) → uncapped, reductions extend
+  - Physical-cap upgrades (autospin delay, tick rate, reel/row count)
+    → capped, prestige raises cap
+  But uncapped-plus-reductions might feel muddier than capped-with-
+  explicit-ceiling. Pending real playtesting.
+
+- Point-to-upgrade ratio. At ~1000 points per prestige, does one
+  reduction level cost ~50 (many purchases per run, commit to one
+  track) or ~200 (few purchases per run, spread thin)? Depends on how
+  many tracks we want active per run and on card-pack costs.
+
+- Card acquisition rate. Depends on points-per-prestige and
+  pack-cost balance.
+
+- Card mechanics beyond paylines. Wild probability, symbol-specific
+  payout tweaks, etc., are all candidates. Surface-area discussion
+  pending.
+
+### Design principle
+
+Prestige is just one stepping stone. The game is comfortable having
+MORE reset layers above prestige ("reset everything but your cards"
+is an explicit future layer). Each layer's currency is the "points
+of the previous layer's runs." Design each layer so it can eventually
+become a mid-game layer, not necessarily the top.
 
 ## Upgrade set (current, to retune)
 
