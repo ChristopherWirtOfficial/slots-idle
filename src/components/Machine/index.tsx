@@ -21,6 +21,7 @@ import { PaylineOverlay } from './PaylineOverlay';
 import { PullButton } from './PullButton';
 import { ReelGrid } from './ReelGrid';
 import { WinSummary } from './WinSummary';
+import { WildRerollPopup } from './WildRerollPopup';
 import { useCellCenters } from './useCellCenters';
 import { useWinCycle } from './useWinCycle';
 
@@ -121,6 +122,8 @@ export function Machine({
             bigThreshold={bigThreshold}
           />
         )}
+
+        <WildRerollPopup />
       </ReelGrid>
 
       <PullButton canSpin={canSpin} spinning={spinning} onSpin={handlePull} />

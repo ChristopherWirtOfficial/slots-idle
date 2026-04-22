@@ -36,9 +36,33 @@ export function rollSymbol(
   luck: number,
   rng: () => number,
 ): SlotSymbol {
+  return rollSymbolWithK(symbols, luck, rng, LUCK_PRESSURE_K);
+}
+
+/**
+ * Wild-line reroll uses a steeper luck curve. Base rolls use K=6;
+ * this uses K=12. At luck=0 the distribution is identical to the
+ * base roll (exp(0)=1 either way), but every luck level bends the
+ * distribution twice as hard here. Intent: luck matters MORE for
+ * wild-only jackpot moments than for regular spins.
+ */
+export function rollSymbolBiased(
+  symbols: SlotSymbol[],
+  luck: number,
+  rng: () => number,
+): SlotSymbol {
+  return rollSymbolWithK(symbols, luck, rng, LUCK_PRESSURE_K * 2);
+}
+
+function rollSymbolWithK(
+  symbols: SlotSymbol[],
+  luck: number,
+  rng: () => number,
+  k: number,
+): SlotSymbol {
   const weights = symbols.map((s, i) => {
     const rarity = i / Math.max(1, symbols.length - 1);
-    return s.weight * Math.exp(luck * rarity * LUCK_PRESSURE_K);
+    return s.weight * Math.exp(luck * rarity * k);
   });
   const total = weights.reduce((a, b) => a + b, 0);
   let r = rng() * total;

@@ -2,6 +2,7 @@ import { atom } from 'jotai';
 import { spin } from '../../engine/spin';
 import {
   Cell,
+  MachineWin,
   Payline,
   ResolvedMachineConfig,
   SpinResult,
@@ -12,6 +13,7 @@ import {
   rollDistanceCells,
   rollDuration,
 } from '../../engine/animation';
+import { rollSymbolBiased } from '../../engine/grid';
 import {
   sfxBigWin,
   sfxJackpot,
@@ -29,13 +31,19 @@ import {
 import { activeMachineAtom, resolvedConfigAtom } from '../machine';
 import { currentBetAtom, luckAtom } from '../upgrades';
 import { globalMultAtom } from '../prestige';
-import { lastFloatAtom, lastResultAtom, pendingResultAtom } from '../session';
+import {
+  lastFloatAtom,
+  lastResultAtom,
+  pendingResultAtom,
+  wildRerollAtom,
+} from '../session';
 import {
   anyReelSpinningAtom,
   frameTimeAtom,
   getCurrentWindow,
   reelAtomsAtom,
 } from '../reels';
+import Decimal from 'break_infinity.js';
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -135,9 +143,46 @@ export const spinActionAtom = atom(null, (get, set) => {
   sfxSpinStart();
 });
 
+const WILD_REROLL_DURATION_MS = 1400;
+
+/**
+ * Rebuild pending result wins after the wild-only reveal. Each
+ * wildOnly win gets the revealSymbol as its symbol, with payout
+ * computed using that symbol's match table. totalPayout is recomputed
+ * so the commit sees the post-reroll total.
+ */
+function applyWildReroll(
+  pending: SpinResult,
+  revealSymbol: { id: string; payouts: Record<number, number> },
+  bet: number,
+  globalMult: Decimal,
+): SpinResult {
+  const newWins: MachineWin[] = pending.wins.map((w) => {
+    if (!w.meta?.wildOnly) return w;
+    const matchCount = (w.meta.matchCount as number | undefined) ?? 0;
+    const multiplier = revealSymbol.payouts[matchCount];
+    if (multiplier === undefined || multiplier === 0) return w;
+    const payout = globalMult.mul(bet * multiplier).floor();
+    return {
+      ...w,
+      symbol: revealSymbol as MachineWin['symbol'],
+      payout,
+      isJackpot: revealSymbol.id === 'seven',
+      meta: { ...w.meta, wildOnly: false, wildResolvedTo: revealSymbol.id },
+    };
+  });
+  const totalPayout = newWins.reduce<Decimal>(
+    (s, w) => s.add(w.payout),
+    new Decimal(0),
+  );
+  const hasJackpot = newWins.some((w) => w.isJackpot);
+  return { ...pending, wins: newWins, totalPayout, hasJackpot };
+}
+
 /**
  * Runs every animation tick. Advances frame time, lands ready reels,
- * commits the pending payout once all reels have landed.
+ * handles the wild-only reroll pause, commits the pending payout once
+ * all reels have landed AND any pending reroll has resolved.
  */
 export const animationTickAtom = atom(null, (get, set) => {
   const t = nowMs();
@@ -157,24 +202,62 @@ export const animationTickAtom = atom(null, (get, set) => {
   if (pending === null) return;
   if (get(anyReelSpinningAtom)) return;
 
-  // All reels landed — commit the pending result.
-  set(chipsAtom, get(chipsAtom).add(pending.totalPayout));
-  set(lifetimeWinningsAtom, get(lifetimeWinningsAtom).add(pending.totalPayout));
-  set(totalEverWonAtom, get(totalEverWonAtom).add(pending.totalPayout));
+  // Wild-only reroll pause. If the pending result has any wild-only
+  // wins, run the reroll animation before committing.
+  const hasWildOnly = pending.wins.some((w) => w.meta?.wildOnly);
+  const existingReroll = get(wildRerollAtom);
+
+  if (hasWildOnly && existingReroll === null) {
+    // Kick off the reroll. Pre-roll the reveal symbol now so the
+    // popup's fade-in has a target; the popup's animation will show
+    // symbols cycling then land on this one.
+    const config = get(resolvedConfigAtom);
+    const luck = get(luckAtom);
+    const revealSymbol = rollSymbolBiased(config.symbols, luck, Math.random);
+    set(wildRerollAtom, {
+      startedAt: t,
+      durationMs: WILD_REROLL_DURATION_MS,
+      revealSymbol,
+    });
+    return;
+  }
+
+  if (existingReroll !== null) {
+    // Still rerolling — wait until the animation duration elapses.
+    if (t - existingReroll.startedAt < existingReroll.durationMs) return;
+
+    // Reroll animation complete. Apply the reveal to the pending wins
+    // and clear the reroll atom. The next tick (or the continuation
+    // below) will run normal commit with the resolved pending.
+    const bet = get(currentBetAtom);
+    const mult = get(globalMultAtom);
+    const resolved = applyWildReroll(pending, existingReroll.revealSymbol, bet, mult);
+    set(pendingResultAtom, resolved);
+    set(wildRerollAtom, null);
+    // Fall through to commit using the resolved pending below.
+  }
+
+  // All reels landed AND any reroll is resolved — commit.
+  const commitPending = get(pendingResultAtom);
+  if (commitPending === null) return;
+
+  set(chipsAtom, get(chipsAtom).add(commitPending.totalPayout));
+  set(lifetimeWinningsAtom, get(lifetimeWinningsAtom).add(commitPending.totalPayout));
+  set(totalEverWonAtom, get(totalEverWonAtom).add(commitPending.totalPayout));
   const spins = get(spinsTotalAtom) + 1;
   set(spinsTotalAtom, spins);
-  set(lastResultAtom, pending);
-  if (pending.totalPayout.gt(0)) {
+  set(lastResultAtom, commitPending);
+  if (commitPending.totalPayout.gt(0)) {
     set(lastFloatAtom, {
       id: spins,
-      amount: pending.totalPayout,
-      isJackpot: pending.hasJackpot,
+      amount: commitPending.totalPayout,
+      isJackpot: commitPending.hasJackpot,
     });
   }
-  if (pending.hasJackpot) set(jackpotsAtom, get(jackpotsAtom) + 1);
+  if (commitPending.hasJackpot) set(jackpotsAtom, get(jackpotsAtom) + 1);
   set(pendingResultAtom, null);
 
-  const tier = winTier(pending, get(currentBetAtom));
+  const tier = winTier(commitPending, get(currentBetAtom));
   if (tier === 'jackpot') window.setTimeout(sfxJackpot, 120);
   else if (tier === 'big') window.setTimeout(sfxBigWin, 100);
   else if (tier === 'small') window.setTimeout(sfxSmallWin, 80);
