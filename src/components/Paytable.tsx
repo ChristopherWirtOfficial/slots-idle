@@ -104,6 +104,17 @@ export function Paytable() {
     <Panel>
       <Title>Paytable</Title>
       <Grid>
+        {config.wild.chance > 0 && (
+          <Row>
+            <Left>
+              <Glyph c={config.wild.color}>{config.wild.glyph}</Glyph>
+              <span>{config.wild.name}</span>
+            </Left>
+            <Payouts>
+              <Tier dim={false}>Substitutes</Tier>
+            </Payouts>
+          </Row>
+        )}
         {config.symbols.map((s) => (
           <Row key={s.id}>
             <Left>

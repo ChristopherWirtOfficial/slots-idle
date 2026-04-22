@@ -26,6 +26,7 @@ export const reelCountAtom = atom((get) => get(topologyAtom).reelCount);
 export const rowCountAtom = atom((get) => get(topologyAtom).rowCount);
 export const paylinesAtom = atom((get) => get(resolvedConfigAtom).paylines);
 export const symbolsAtom = atom((get) => get(resolvedConfigAtom).symbols);
+export const wildAtom = atom((get) => get(resolvedConfigAtom).wild);
 
 /**
  * Merged upgrade list: engine globals + the active machine's contribution.

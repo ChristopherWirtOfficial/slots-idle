@@ -70,6 +70,19 @@ export interface RollContext {
 export type RollStep = (ctx: RollContext) => Cell | null;
 
 /**
+ * Wild step: rolls a wild cell with probability `config.wild.chance`.
+ * Falls through to the next step if no wild. Always runs, even when
+ * chance is 0 — the step reads the config value and does the right
+ * thing. No gating code, no "is wilds unlocked?" branch.
+ */
+export const wildStep: RollStep = ({ config, rng }) => {
+  if (rng() < config.wild.chance) {
+    return { kind: 'wild' };
+  }
+  return null;
+};
+
+/**
  * The default symbol step — always claims. Rolls a weighted symbol
  * with luck pressure over the machine's regular symbol pool.
  *
@@ -97,10 +110,11 @@ export function rollCell(steps: RollStep[], ctx: RollContext): Cell {
 }
 
 /**
- * The default roll pipeline. Future features (wilds, scatters, sticky)
- * prepend or insert steps here.
+ * The default roll pipeline. Order = priority — wilds roll before
+ * symbols so they aren't subject to luck pressure. Future features
+ * (scatters, sticky) prepend or insert steps here.
  */
-const DEFAULT_STEPS: RollStep[] = [symbolStep];
+const DEFAULT_STEPS: RollStep[] = [wildStep, symbolStep];
 
 /** Generate a fresh grid [reelCount][rowCount]. Machine-neutral. */
 export function generateGrid(

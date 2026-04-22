@@ -108,12 +108,27 @@ export interface UpgradeDef {
 }
 
 /**
+ * Config for wild cells — a symbol-agnostic substitute that matches
+ * anything on a payline. Always present in a resolved config; at
+ * level 0 the `chance` is 0 and nothing happens. The declarative
+ * path: fall through to symbol rolls without any gating code.
+ */
+export interface WildConfig {
+  glyph: string;
+  color: string;
+  name: string;
+  /** Probability any given cell is rolled as a wild. 0..1. */
+  chance: number;
+}
+
+/**
  * What a machine resolves to, given a current upgrade-levels snapshot.
  * Pure derivation: same levels → same resolved config, always.
  */
 export interface ResolvedMachineConfig {
   topology: SpinTopology;
   symbols: SlotSymbol[];
+  wild: WildConfig;
   paylines: Payline[];
 }
 

@@ -8,10 +8,10 @@ import {
   reelStateAtomFamily,
   SymWindow,
 } from '../state/reels';
-import { rowCountAtom } from '../state/machine';
+import { rowCountAtom, wildAtom } from '../state/machine';
 import { easeOut, velocityCellsPerFrame } from '../engine/animation';
 import { theme } from '../theme';
-import { Cell } from '../engine/types';
+import { Cell, WildConfig } from '../engine/types';
 import { sfxReelTick } from '../audio/sfx';
 
 const ReelFrame = styled.div`
@@ -68,22 +68,20 @@ const CellBox = styled.div<{ color: string }>`
 
 /**
  * Render one grid cell. Symbol cells show the symbol glyph/color.
- * Wild cells render with a placeholder star — visual is finalized
- * when the wild feature lands; for now any wild cell that happens to
- * appear will still render legibly.
+ * Wild cells render the machine's configured wild glyph/color.
  */
-function CellView({ cell }: { cell: Cell }) {
+function CellView({ cell, wild }: { cell: Cell; wild: WildConfig }) {
   if (cell.kind === 'wild') {
-    return <CellBox color={theme.color.goldBright}>★</CellBox>;
+    return <CellBox color={wild.color}>{wild.glyph}</CellBox>;
   }
   return <CellBox color={cell.symbol.color}>{cell.symbol.glyph}</CellBox>;
 }
 
-function RestingWindow({ window }: { window: SymWindow }) {
+function RestingWindow({ window, wild }: { window: SymWindow; wild: WildConfig }) {
   return (
     <Strip>
       {window.map((c, i) => (
-        <CellView key={i} cell={c} />
+        <CellView key={i} cell={c} wild={wild} />
       ))}
     </Strip>
   );
@@ -91,8 +89,10 @@ function RestingWindow({ window }: { window: SymWindow }) {
 
 function SpinningReel({
   state,
+  wild,
 }: {
   state: Extract<ReelAnimState, { kind: 'spinning' }>;
+  wild: WildConfig;
 }) {
   const frameTime = useAtomValue(frameTimeAtom);
   const elapsed = Math.max(0, frameTime - state.startTime);
@@ -119,7 +119,7 @@ function SpinningReel({
       } as CSSProperties}
     >
       {state.strip.map((c, i) => (
-        <CellView key={i} cell={c} />
+        <CellView key={i} cell={c} wild={wild} />
       ))}
     </Strip>
   );
@@ -132,6 +132,7 @@ interface ReelProps {
 export function Reel({ reelIdx }: ReelProps) {
   const state = useAtomValue(reelStateAtomFamily(reelIdx));
   const rowCount = useAtomValue(rowCountAtom);
+  const wild = useAtomValue(wildAtom);
 
   return (
     <ReelFrame
@@ -139,9 +140,9 @@ export function Reel({ reelIdx }: ReelProps) {
       style={{ ['--row-count' as string]: rowCount } as CSSProperties}
     >
       {state.kind === 'resting' ? (
-        <RestingWindow window={state.window} />
+        <RestingWindow window={state.window} wild={wild} />
       ) : (
-        <SpinningReel state={state} />
+        <SpinningReel state={state} wild={wild} />
       )}
     </ReelFrame>
   );

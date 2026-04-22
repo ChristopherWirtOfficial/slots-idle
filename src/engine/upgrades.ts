@@ -43,6 +43,28 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
     format: (lvl) => `×${Math.pow(1.5, lvl).toFixed(2)} payouts`,
   },
   {
+    id: 'wildChance',
+    name: 'Wild Card',
+    blurb: 'A mystery card substitutes for anything on a payline.',
+    baseCost: 400,
+    costMult: 2.0,
+    maxLevel: 10,
+    // Effect = per-cell probability a cell is rolled as a wild, 0..1.
+    // Curve: 2 * 1.5^(L-1) weight, normalized to weight/(weight+100).
+    // Produces a tease at L1 (~2%), crossover at L5 (~9%), dominant
+    // at L10 (~44%). See conversation 2026-04-17 for the math.
+    effect: (lvl) => {
+      if (lvl === 0) return 0;
+      const w = 2 * Math.pow(1.5, lvl - 1);
+      return w / (w + 100);
+    },
+    format: (lvl) => {
+      if (lvl === 0) return 'Unlock at Lv 1';
+      const w = 2 * Math.pow(1.5, lvl - 1);
+      return `~${((w / (w + 100)) * 100).toFixed(1)}% per cell`;
+    },
+  },
+  {
     id: 'autospin',
     name: 'Auto-Spin Butler',
     blurb:

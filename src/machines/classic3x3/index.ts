@@ -1,4 +1,5 @@
 import { Machine, ResolvedMachineConfig, UpgradeDef } from '../../engine/types';
+import { GLOBAL_UPGRADES } from '../../engine/upgrades';
 import { CLASSIC_SYMBOLS } from './symbols';
 import { paylinesForTopology } from './paylines';
 import { evaluate } from './evaluate';
@@ -48,9 +49,22 @@ function resolveConfig(levels: Record<string, number>): ResolvedMachineConfig {
   const reelCount = BASE_REEL_COUNT + extraReels;
   const rowCount = BASE_ROW_COUNT + extraRows;
   const topology = { reelCount, rowCount };
+
+  // Wild chance: the wildChance upgrade's effect IS the per-cell
+  // probability, 0..1. At level 0 the upgrade returns 0 and nothing
+  // will ever roll a wild.
+  const wildUpgrade = GLOBAL_UPGRADES.find((u) => u.id === 'wildChance');
+  const wildChance = wildUpgrade?.effect?.(levels.wildChance ?? 0) ?? 0;
+
   return {
     topology,
     symbols: CLASSIC_SYMBOLS,
+    wild: {
+      glyph: '★',
+      color: '#d4a04a',
+      name: 'Wild',
+      chance: wildChance,
+    },
     paylines: paylinesForTopology(topology),
   };
 }
