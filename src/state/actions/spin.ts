@@ -39,16 +39,12 @@ import {
 } from '../session';
 import {
   anyReelSpinningAtom,
-  frameTimeAtom,
   getCurrentWindow,
   reelAtomsAtom,
 } from '../reels';
+import { effectiveNowAtom } from '../clock';
 import Decimal from 'break_infinity.js';
 import { canSpinAtom } from '../canSpin';
-
-function nowMs(): number {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now();
-}
 
 /**
  * Near-miss detection: any active payline has its first two positions
@@ -115,7 +111,7 @@ export const spinActionAtom = atom(null, (get, set) => {
   set(lastFloatAtom, null);
 
   const nearMiss = detectNearMiss(result, config.paylines);
-  const startTime = nowMs();
+  const startTime = get(effectiveNowAtom);
   const reelAtoms = get(reelAtomsAtom);
   const lastReelIdx = reelAtoms.length - 1;
 
@@ -184,8 +180,7 @@ function applyWildReroll(
  * all reels have landed AND any pending reroll has resolved.
  */
 export const animationTickAtom = atom(null, (get, set) => {
-  const t = nowMs();
-  set(frameTimeAtom, t);
+  const t = get(effectiveNowAtom);
 
   const reelAtoms = get(reelAtomsAtom);
   for (const reelAtom of reelAtoms) {

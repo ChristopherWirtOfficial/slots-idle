@@ -3,11 +3,11 @@ import styled from '@emotion/styled';
 import { useAtomValue } from 'jotai';
 import { CSSProperties, useEffect, useRef } from 'react';
 import {
-  frameTimeAtom,
   ReelAnimState,
   reelStateAtomFamily,
   SymWindow,
 } from '../state/reels';
+import { effectiveNowAtom } from '../state/clock';
 import { rowCountAtom, wildAtom } from '../state/machine';
 import { easeOut, velocityCellsPerFrame } from '../engine/animation';
 import { theme } from '../theme';
@@ -94,7 +94,7 @@ function SpinningReel({
   state: Extract<ReelAnimState, { kind: 'spinning' }>;
   wild: WildConfig;
 }) {
-  const frameTime = useAtomValue(frameTimeAtom);
+  const frameTime = useAtomValue(effectiveNowAtom);
   const elapsed = Math.max(0, frameTime - state.startTime);
   const t = Math.min(1, elapsed / state.duration);
   const cellsScrolled = easeOut(t) * state.distanceCells;

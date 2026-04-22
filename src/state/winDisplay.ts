@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import { autospinDelayMsAtom, autospinEffectiveAtom } from './autospin';
-import { frameTimeAtom } from './reels';
+import { effectiveNowAtom } from './clock';
 import { lastCommitAtom } from './session';
 
 /** Natural per-win display duration at slow/manual pace. */
@@ -90,7 +90,7 @@ export const winSlotsAtom = atom<WinSlot[]>((get) => {
 export const winElapsedMsAtom = atom<number>((get) => {
   const commit = get(lastCommitAtom);
   if (commit === null) return 0;
-  return get(frameTimeAtom) - commit.committedAt;
+  return get(effectiveNowAtom) - commit.committedAt;
 });
 
 /**

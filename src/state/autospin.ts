@@ -3,7 +3,7 @@ import { atomWithStorage } from 'jotai/utils';
 import { GLOBAL_UPGRADES } from '../engine/upgrades';
 import { levelsAtom } from './levels';
 import { canSpinAtom } from './canSpin';
-import { frameTimeAtom } from './reels';
+import { effectiveNowAtom } from './clock';
 import { lastCommitAtom } from './session';
 import { spinActionAtom } from './actions/spin';
 
@@ -71,17 +71,18 @@ export const autospinWaitingAtom = atom((get) => {
  * delay has elapsed since the last commit. Runs every tick (cheap —
  * all the checks are atom reads, guarded early).
  *
- * "Elapsed since last commit" uses frameTimeAtom and lastCommit.committedAt,
- * so fast-forwarding frame time (e.g., offline catch-up) fast-forwards
- * autospin firing too. If there's never been a commit (fresh install,
- * post-reset), fires immediately — the player has nothing to wait on.
+ * "Elapsed since last commit" uses effectiveNowAtom and
+ * lastCommit.committedAt, so fast-forwarding virtual time (offline
+ * catch-up) fast-forwards autospin firing too. If there's never been
+ * a commit (fresh install, post-reset), fires immediately — the
+ * player has nothing to wait on.
  */
 export const autospinTickAtom = atom(null, (get, set) => {
   if (!get(autospinWaitingAtom)) return;
   const commit = get(lastCommitAtom);
   const delayMs = get(autospinDelayMsAtom);
   if (commit !== null) {
-    const elapsed = get(frameTimeAtom) - commit.committedAt;
+    const elapsed = get(effectiveNowAtom) - commit.committedAt;
     if (elapsed < delayMs) return;
   }
   set(spinActionAtom);

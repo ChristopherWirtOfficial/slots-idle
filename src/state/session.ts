@@ -9,7 +9,7 @@ export const pendingResultAtom = atom<SpinResult | null>(null);
  * post-commit UI (win highlights, caption, float toast) derives from
  * this — `committedAt` is a fact about the commit event itself, not
  * a snapshot of ambient state. See also state/winDisplay.ts which
- * derives the ripple timeline from this + frameTimeAtom.
+ * derives the ripple timeline from this + effectiveNowAtom.
  */
 export interface LastCommit {
   result: SpinResult;

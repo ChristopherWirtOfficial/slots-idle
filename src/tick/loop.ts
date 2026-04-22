@@ -1,4 +1,6 @@
 import { MAX_QUEUED_TICKS, TICK_LENGTH } from './knobs';
+import { getDefaultStore } from 'jotai';
+import { realNowAtom } from '../state/clock';
 
 export interface TickFunctor {
   readonly id: string;
@@ -85,6 +87,20 @@ function deferPulse(): void {
 export function startTickLoop(): void {
   if (started) return;
   started = true;
+
+  // First tick functor: sample real wall-clock into realNowAtom. Runs
+  // before all other functors (first registered, first in iteration)
+  // so every other tick this frame reads a fresh clock through
+  // effectiveNowAtom. App-lifetime registration — never unregisters.
+  const store = getDefaultStore();
+  registerFunctor({
+    id: '__clock',
+    frequency: 1,
+    functor: () => {
+      store.set(realNowAtom, now());
+    },
+  });
+
   lastTickTime = now();
   setTimeout(deferPulse, TICK_LENGTH);
 }

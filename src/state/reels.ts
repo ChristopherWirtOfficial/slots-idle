@@ -44,9 +44,6 @@ export const anyReelSpinningAtom = atom((get) => {
   return atoms.some((a) => get(a).kind === 'spinning');
 });
 
-/** Frame time bumped by the animation tick. Only SpinningReel subscribes. */
-export const frameTimeAtom = atom(0);
-
 export function getCurrentWindow(state: ReelAnimState): SymWindow {
   return state.kind === 'resting' ? state.window : state.resultWindow;
 }
