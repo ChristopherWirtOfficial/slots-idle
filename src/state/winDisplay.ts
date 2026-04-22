@@ -110,6 +110,49 @@ export function slotOpacity(slot: WinSlot, elapsedMs: number): number {
 }
 
 /**
+ * How long a per-line float toast lives, in ms, starting when the slot
+ * starts. Independent of the slot's visible-overlay duration — even at
+ * high autospin compression where overlay duration bottoms at 250ms,
+ * the float still rises for its own fixed-ish duration (with a compress
+ * floor so it doesn't outlast the available window).
+ */
+export const LINE_FLOAT_DURATION_MS = 1100;
+
+export interface LineFloatAnim {
+  /** 0..1 progress through the float's lifetime. */
+  t: number;
+  /** 0..1 opacity — fade in quickly, hold, fade out. */
+  opacity: number;
+  /** Pixels the toast has risen from its anchor. */
+  riseY: number;
+}
+
+/**
+ * Pure: given a slot's startMs and the current elapsed time, compute
+ * the float's animation state. Returns null when the float is not
+ * currently visible (before start or after end). No atom reads — this
+ * is called by the render component per frame with values from atoms.
+ */
+export function lineFloatAnim(
+  slotStartMs: number,
+  elapsedMs: number,
+  durationMs: number = LINE_FLOAT_DURATION_MS,
+): LineFloatAnim | null {
+  if (elapsedMs < slotStartMs) return null;
+  const local = elapsedMs - slotStartMs;
+  if (local >= durationMs) return null;
+  const t = local / durationMs;
+  // Fade: fast in (0-12%), plateau (12-70%), slow out (70-100%)
+  let opacity: number;
+  if (t < 0.12) opacity = t / 0.12;
+  else if (t < 0.7) opacity = 1;
+  else opacity = 1 - (t - 0.7) / 0.3;
+  // Rise: eased toward a 40px target
+  const riseY = 40 * (1 - Math.pow(1 - t, 2));
+  return { t, opacity, riseY };
+}
+
+/**
  * Which win should the summary caption describe? The latest-started
  * slot (even if its window has ended). Null when no wins. Recomputes
  * every frame but its value only changes at slot boundaries — jotai

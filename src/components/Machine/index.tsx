@@ -29,6 +29,7 @@ import { ReelGrid } from './ReelGrid';
 import { WinSummary } from './WinSummary';
 import { WildRerollPopup } from './WildRerollPopup';
 import { WinOverlays } from './WinOverlays';
+import { LineFloats } from './LineFloats';
 import { useCellCenters } from './useCellCenters';
 
 const JACKPOT_SHAKE_MS = 700;
@@ -100,6 +101,7 @@ export function Machine() {
         ))}
 
         <WinOverlays centers={centers} />
+        <LineFloats centers={centers} bet={bet} />
 
         {visibleFloat && (
           <FloatingWin
