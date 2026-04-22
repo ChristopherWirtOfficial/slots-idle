@@ -12,7 +12,6 @@ import { startTickLoop } from './tick/loop';
 import { useAutospin } from './hooks/useAutospin';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
 import { useAnimationTick } from './hooks/useAnimationTick';
-import { useMasterVolume } from './hooks/useMasterVolume';
 import { useReelSync } from './hooks/useReelSync';
 import { VolumeControl } from './components/VolumeControl';
 import { CheatPanel } from './components/CheatPanel';
@@ -202,9 +201,6 @@ export function App() {
 
   // Drives reel animations: frame time, landings, payout commit.
   useAnimationTick();
-
-  // Syncs volume/mute atoms into the audio engine's master gain.
-  useMasterVolume();
 
   // Keep reel windows in sync with the current topology (reelCount × rowCount).
   // Fills initial windows on mount and handles topology changes from upgrades.

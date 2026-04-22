@@ -9,21 +9,24 @@ interface AudioEngine {
 let engine: AudioEngine | null = null;
 
 /**
- * The desired master gain, tracked outside the engine so it survives
- * before the engine exists. setMasterGain writes here regardless of
- * engine state; ensureAudio reads it when creating the master node.
- * Default of 0.5 only applies if no one has set a value yet.
+ * Lazy-initialize the audio engine. Safe to call repeatedly — returns
+ * the existing engine if already created. Must be called from a user
+ * gesture handler (browser autoplay policy).
+ *
+ * `initialGain` sets the master gain at creation time. Callers should
+ * pass the current effective gain from app state (e.g., derived from
+ * volume/mute atoms) so the first sound respects user preferences.
+ * Ignored if the engine already exists; change gain via setMasterGain
+ * after that.
  */
-let currentTargetGain = 0.5;
-
-export function ensureAudio(): AudioEngine | null {
+export function ensureAudio(initialGain = 0.5): AudioEngine | null {
   if (engine) return engine;
   try {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return null;
     const ctx = new Ctx();
     const master = ctx.createGain();
-    master.gain.value = currentTargetGain;
+    master.gain.value = initialGain;
     master.connect(ctx.destination);
     engine = { ctx, master };
     return engine;
@@ -53,9 +56,6 @@ export function sliderToGain(s: number): number {
 }
 
 export function setMasterGain(gain: number): void {
-  // Always record the target — useMasterVolume may fire before the
-  // engine is alive, and we need that value at engine-init time.
-  currentTargetGain = gain;
   if (!engine) return;
   const t = engine.ctx.currentTime;
   // Short ramp to avoid clicks when moving the slider

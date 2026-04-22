@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import Decimal from 'break_infinity.js';
 import { useEffect, useRef, useState } from 'react';
 import { Reel } from '../Reel';
@@ -11,7 +11,7 @@ import {
   resolvedConfigAtom,
 } from '../../state/machine';
 import { jackpotsAtom } from '../../state/economy';
-import { ensureAudio } from '../../audio/engine';
+import { ensureAudioReadyAtom } from '../../state/audio';
 import { FloatingWin } from './FloatingWin';
 import { AutoSpinToggle } from './AutoSpinToggle';
 import { CreditBar } from './CreditBar';
@@ -50,6 +50,7 @@ export function Machine({
   const config = useAtomValue(resolvedConfigAtom);
   const reelCount = useAtomValue(reelCountAtom);
   const jackpots = useAtomValue(jackpotsAtom);
+  const ensureAudioReady = useSetAtom(ensureAudioReadyAtom);
 
   // --- Grid geometry for overlay positioning ---
   const gridRef = useRef<HTMLDivElement>(null);
@@ -85,7 +86,7 @@ export function Machine({
   const justWon = Boolean(lastResult && lastResult.totalPayout.gt(0) && !spinning);
 
   const handlePull = () => {
-    ensureAudio();
+    ensureAudioReady();
     onSpin();
   };
 

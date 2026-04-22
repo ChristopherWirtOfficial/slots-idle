@@ -1,9 +1,14 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
-import { useAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { useEffect, useRef, useState } from 'react';
-import { mutedAtom, volumeAtom } from '../state/audio';
-import { ensureAudio } from '../audio/engine';
+import {
+  ensureAudioReadyAtom,
+  mutedAtom,
+  setMutedAtom,
+  setVolumeAtom,
+  volumeAtom,
+} from '../state/audio';
 import { theme } from '../theme';
 
 const Wrap = styled.div`
@@ -103,8 +108,11 @@ const SPEAKER_ON = '♪';
 const SPEAKER_OFF = '∅';
 
 export function VolumeControl() {
-  const [volume, setVolume] = useAtom(volumeAtom);
-  const [muted, setMuted] = useAtom(mutedAtom);
+  const volume = useAtomValue(volumeAtom);
+  const muted = useAtomValue(mutedAtom);
+  const setVolume = useSetAtom(setVolumeAtom);
+  const setMuted = useSetAtom(setMutedAtom);
+  const ensureAudioReady = useSetAtom(ensureAudioReadyAtom);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -127,19 +135,17 @@ export function VolumeControl() {
   }, [open]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    ensureAudio();
-    const v = Number(e.target.value);
-    setVolume(v);
-    if (muted && v > 0) setMuted(false);
+    ensureAudioReady();
+    setVolume(Number(e.target.value));
   };
 
   const toggleMute = () => {
-    ensureAudio();
+    ensureAudioReady();
     setMuted(!muted);
   };
 
   const toggleOpen = () => {
-    ensureAudio();
+    ensureAudioReady();
     setOpen((o) => !o);
   };
 
