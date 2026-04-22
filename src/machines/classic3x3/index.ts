@@ -60,7 +60,7 @@ function resolveConfig(levels: Record<string, number>): ResolvedMachineConfig {
     topology,
     symbols: CLASSIC_SYMBOLS,
     wild: {
-      glyph: '★',
+      glyph: '🃏',
       color: '#d4a04a',
       name: 'Wild',
       chance: wildChance,

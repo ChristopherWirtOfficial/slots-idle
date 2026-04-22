@@ -3,6 +3,7 @@ import { ACTIVE_MACHINE } from '../machines/registry';
 import { levelsAtom } from './levels';
 import { GLOBAL_UPGRADES } from '../engine/upgrades';
 import { UpgradeDef } from '../engine/types';
+import { cheatWildChanceAtom } from './cheats';
 
 /**
  * The active machine. Boot-only — see registry.ts for what runtime
@@ -12,12 +13,19 @@ export const activeMachineAtom = atom(ACTIVE_MACHINE);
 
 /**
  * The machine's current resolved shape, re-derived whenever levels change.
- * Pure derivation: machine.resolveConfig(levels).
+ * Pure derivation from machine.resolveConfig — then cheat overrides layered
+ * on top (cheats are dev/testing aids, they override real state).
  */
 export const resolvedConfigAtom = atom((get) => {
   const machine = get(activeMachineAtom);
   const levels = get(levelsAtom);
-  return machine.resolveConfig(levels);
+  const config = machine.resolveConfig(levels);
+
+  const wildCheat = get(cheatWildChanceAtom);
+  if (wildCheat !== null) {
+    return { ...config, wild: { ...config.wild, chance: wildCheat } };
+  }
+  return config;
 });
 
 // Convenience derived atoms for commonly-read fields.

@@ -12,7 +12,16 @@ import { atom } from 'jotai';
 /** Luck value override. When non-null, replaces the upgrade-derived luck. */
 export const cheatLuckAtom = atom<number | null>(null);
 
+/**
+ * Wild-chance override. When non-null, replaces whatever the wildChance
+ * upgrade would produce. Value is the per-cell probability (0..1).
+ */
+export const cheatWildChanceAtom = atom<number | null>(null);
+
 /** Convenience: any cheat currently active? Drives the "cheat active" badge. */
 export const anyCheatActiveAtom = atom((get) => {
-  return get(cheatLuckAtom) !== null;
+  return (
+    get(cheatLuckAtom) !== null ||
+    get(cheatWildChanceAtom) !== null
+  );
 });

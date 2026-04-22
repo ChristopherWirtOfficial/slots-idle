@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { anyCheatActiveAtom } from '../../state/cheats';
 import { LuckCheat } from './LuckCheat';
 import { ResetCheat } from './ResetCheat';
+import { WildCheat } from './WildCheat';
 
 const Wrap = styled.div`
   position: fixed;
@@ -95,6 +96,7 @@ export function CheatPanel() {
       {open && (
         <Body>
           <LuckCheat />
+          <WildCheat />
           <ResetCheat />
         </Body>
       )}
