@@ -3,6 +3,9 @@ import { atomWithStorage } from 'jotai/utils';
 import { GLOBAL_UPGRADES } from '../engine/upgrades';
 import { levelsAtom } from './levels';
 import { canSpinAtom } from './canSpin';
+import { frameTimeAtom } from './reels';
+import { lastCommitAtom } from './session';
+import { spinActionAtom } from './actions/spin';
 
 /**
  * Autospin-specific state. Grouped here because it's a self-contained
@@ -14,6 +17,12 @@ import { canSpinAtom } from './canSpin';
  *   user toggle    → autospinActiveAtom (session pref: should it be running?)
  *   both combined  → autospinEffectiveAtom (actually auto-spinning right now?)
  *   + runtime      → autospinWaitingAtom (currently in the post-settle delay?)
+ *
+ * Firing: autospinTickAtom runs every tick, fires the spin when the
+ * configured delay has elapsed since the last commit. Derivation:
+ * "is it time to spin?" is purely a function of current state, not
+ * a scheduled side-effect — which means fast-forward (offline
+ * catch-up) works by just running the tick loop faster.
  */
 
 /** Pause in ms between a settled reel and the next auto-triggered pull. */
@@ -51,9 +60,29 @@ export const autospinEffectiveAtom = atom((get) => {
  * the player can afford the next spin. Transitions false whenever a
  * spin is in flight, the toggle is off, chips are insufficient, etc.
  *
- * Both useAutospin (for the setTimeout) and the UI (for the progress
- * indicator) read this so they agree on what "waiting" means.
+ * Consumers read this to agree on what "waiting" means.
  */
 export const autospinWaitingAtom = atom((get) => {
   return get(autospinEffectiveAtom) && get(canSpinAtom);
+});
+
+/**
+ * Tick action: fires a spin if autospin is waiting AND the configured
+ * delay has elapsed since the last commit. Runs every tick (cheap —
+ * all the checks are atom reads, guarded early).
+ *
+ * "Elapsed since last commit" uses frameTimeAtom and lastCommit.committedAt,
+ * so fast-forwarding frame time (e.g., offline catch-up) fast-forwards
+ * autospin firing too. If there's never been a commit (fresh install,
+ * post-reset), fires immediately — the player has nothing to wait on.
+ */
+export const autospinTickAtom = atom(null, (get, set) => {
+  if (!get(autospinWaitingAtom)) return;
+  const commit = get(lastCommitAtom);
+  const delayMs = get(autospinDelayMsAtom);
+  if (commit !== null) {
+    const elapsed = get(frameTimeAtom) - commit.committedAt;
+    if (elapsed < delayMs) return;
+  }
+  set(spinActionAtom);
 });

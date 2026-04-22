@@ -1,33 +1,19 @@
-import { useAtomValue, useSetAtom } from 'jotai';
-import { useEffect } from 'react';
-import {
-  autospinDelayMsAtom,
-  autospinWaitingAtom,
-} from '../state/autospin';
-import { spinActionAtom } from '../state/actions';
+import { useAtomicTick } from '../tick/useTick';
+import { autospinTickAtom } from '../state/autospin';
 
 /**
- * Drives auto-pulls on a delay-after-settle model.
+ * Drives autospin pulls via the tick loop.
  *
- * When `autospinWaitingAtom` is true (see state/autospin.ts for the
- * exact conditions — effective + settled + affordable), schedule a
- * single setTimeout to fire the next spin after the configured delay.
- * Any state change that flips `waiting` to false cancels the pending
- * timeout via the effect cleanup.
+ * The tick atom reads current game state and decides whether it's
+ * time to fire a spin. Because this is pure "does state match
+ * conditions?" rather than a scheduled side-effect, offline
+ * catch-up fast-forwards autospin naturally — run the ticks faster
+ * and autospin fires faster.
  *
- * The tricky cases (manual spin mid-delay, running out of chips,
- * toggling off, upgrade bought mid-wait) all resolve naturally
- * because `waiting` changes in response to each, triggering cleanup
- * and re-evaluation.
+ * All the edge cases (manual spin mid-delay, running out of chips,
+ * toggling off, upgrade bought mid-wait) resolve naturally because
+ * the tick re-evaluates from scratch each time.
  */
 export function useAutospin(): void {
-  const waiting = useAtomValue(autospinWaitingAtom);
-  const delayMs = useAtomValue(autospinDelayMsAtom);
-  const doSpin = useSetAtom(spinActionAtom);
-
-  useEffect(() => {
-    if (!waiting) return;
-    const timer = window.setTimeout(() => doSpin(), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [waiting, delayMs, doSpin]);
+  useAtomicTick(autospinTickAtom, 1);
 }
