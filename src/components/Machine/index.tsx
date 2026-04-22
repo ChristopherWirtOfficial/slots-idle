@@ -23,7 +23,7 @@ import { ReelGrid } from './ReelGrid';
 import { WinSummary } from './WinSummary';
 import { WildRerollPopup } from './WildRerollPopup';
 import { useCellCenters } from './useCellCenters';
-import { useWinCycle } from './useWinCycle';
+import { slotOpacity, useWinDisplay } from './useWinDisplay';
 
 const JACKPOT_SHAKE_MS = 700;
 const FLOAT_TOAST_MS = 1400;
@@ -57,10 +57,12 @@ export function Machine({
   const gridRef = useRef<HTMLDivElement>(null);
   const centers = useCellCenters(gridRef, reelCount, config.topology.rowCount);
 
-  // --- Active winning payline cycling ---
-  const activeWinIdx = useWinCycle(spinning, lastResult);
-  const activeWin = activeWinIdx !== null && lastResult ? lastResult.wins[activeWinIdx] : null;
-  const activeHighlight = activeWin ? machine.highlightsForWin(activeWin, config) : null;
+  // --- Win display: per-win ripple with autospin compression ---
+  const winDisplay = useWinDisplay(spinning, lastResult);
+  const captionWin =
+    winDisplay.captionIdx !== null && lastResult
+      ? lastResult.wins[winDisplay.captionIdx]
+      : null;
 
   // --- Jackpot cabinet shake (triggered by jackpot counter increment) ---
   const [shaking, setShaking] = useState(false);
@@ -109,11 +111,22 @@ export function Machine({
           <Reel key={i} reelIdx={i} />
         ))}
 
-        <PaylineOverlay
-          highlight={activeHighlight}
-          centers={centers}
-          keyId={activeWinIdx ?? 'none'}
-        />
+        {lastResult &&
+          winDisplay.slots.map((slot) => {
+            const win = lastResult.wins[slot.winIdx];
+            if (!win) return null;
+            const opacity = slotOpacity(slot, winDisplay.nowMs);
+            if (opacity <= 0) return null;
+            const highlight = machine.highlightsForWin(win, config);
+            return (
+              <PaylineOverlay
+                key={slot.winIdx}
+                highlight={highlight}
+                centers={centers}
+                opacity={opacity}
+              />
+            );
+          })}
 
         {visibleFloat && (
           <FloatingWin
@@ -131,9 +144,9 @@ export function Machine({
       <AutoSpinToggle />
 
       <WinSummary
-        activeWin={spinning ? null : activeWin}
+        activeWin={spinning ? null : captionWin}
         winCount={lastResult?.wins.length ?? 0}
-        activeIdx={activeWinIdx}
+        activeIdx={winDisplay.captionIdx}
       />
     </MachineCabinet>
   );
