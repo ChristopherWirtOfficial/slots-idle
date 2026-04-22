@@ -3,6 +3,74 @@
 Decisions and ideas we've made or spitballed but haven't implemented.
 Kept here so they don't get lost between sessions.
 
+## Architecture principles — derive, compose, declarative
+
+These are foundational. When a decision feels hard, it's usually
+because one of these three is being violated.
+
+**Derive.** Every piece of state is either a fact-of-record
+(imperative write because a real event happened) or a pure function
+of other state. If you can derive it, you *must* derive it. Storing
+a derivation creates two sources of truth — the stored value and
+the implicit "what the derivation would currently compute" — and
+now you have a sync problem.
+
+The bar for something being real state is high: is this a fact about
+an event that happened? `committedAt` is a fact about a commit event.
+`frameTime` is a fact about the clock ticking. `chips` is a fact
+about what the player has right now. Those are genuine state.
+
+A "plan" is a derivation; it shouldn't be state. A "snapshot at
+commit" is the escape-hatch instinct that signals you're about to
+store a derivation — usually the fix is to treat the thing as a fact
+of the commit event itself (put it in the commit record), not a
+snapshot of ambient state.
+
+**One-line rule: storing a derivation is an anti-pattern.** Catches
+the snapshot instinct before it becomes a writable atom, a useMemo
+on stale deps, or a hook that owns "plan-shaped" state.
+
+**Compose.** When everything is pure state or pure derivation,
+layers stack cheaply. `winSlotsAtom` reads `lastCommit + autospinDelay`.
+`captionIdxAtom` reads `winSlots + elapsed`. A future audio-cue layer
+could read `winSlots + elapsed` and fire sounds when slots start
+without needing to know anything about captions or overlays. No one
+owns the plan; it's just there, available, and three separate
+concerns can each compose against it without coordinating.
+
+Other direction: if someone adds a new precondition to "can the
+player spin," they add it to `canSpinAtom` and every consumer picks
+it up. Composition means changes propagate through derivation chains
+instead of requiring dispatcher code to notify N consumers.
+
+**Declarative.** Components don't *do* things based on state
+transitions — they *are* a function of current state. The per-line
+float isn't "when a slot starts, mount a float and animate it for
+1.1s." It's "given current slots and current elapsed time, here's
+what floats exist and where." Same logic; second framing never has
+imperative animation bookkeeping to get wrong. No start-of-life
+mount triggering, no end-of-life cleanup. The float exists when it
+should exist, doesn't when it shouldn't, and its visual state is a
+pure function of how far through its life it is.
+
+**How they reinforce.** If you can't derive cleanly, you can't
+compose cleanly. If you can't compose cleanly, you end up writing
+imperative glue that turns the render layer into a side-effect
+choreographer instead of a declarative display.
+
+**Traps that look like the right answer but aren't:**
+- "I'll freeze this derivation so it doesn't recompute when X changes."
+  → X changing IS a real event; the new derivation IS the new truth.
+  If the reflow looks bad, tag with `// WORRY:` and see if it actually
+  matters in practice. Usually it doesn't.
+- "This hook owns local state that drives animation" → usually that
+  state should be atoms; the hook is a relic of react-centric thinking.
+- "I need to snapshot the autospin delay at commit time" → no, just
+  include it in the commit record if it's truly a commit fact, or let
+  the derivation re-derive against live state.
+- useMemo keyed on identity to prevent re-derivation → if you need
+  that, you're probably storing something you should be deriving.
+
 ## Core gameplay arc
 
 - First full run should cliff into "you should prestige" at roughly
