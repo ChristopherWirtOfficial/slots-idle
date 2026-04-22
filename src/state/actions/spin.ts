@@ -32,8 +32,8 @@ import { activeMachineAtom, resolvedConfigAtom } from '../machine';
 import { currentBetAtom, luckAtom } from '../upgrades';
 import { globalMultAtom } from '../prestige';
 import {
+  lastCommitAtom,
   lastFloatAtom,
-  lastResultAtom,
   pendingResultAtom,
   wildRerollAtom,
 } from '../session';
@@ -245,7 +245,7 @@ export const animationTickAtom = atom(null, (get, set) => {
   set(totalEverWonAtom, get(totalEverWonAtom).add(commitPending.totalPayout));
   const spins = get(spinsTotalAtom) + 1;
   set(spinsTotalAtom, spins);
-  set(lastResultAtom, commitPending);
+  set(lastCommitAtom, { result: commitPending, committedAt: t });
   if (commitPending.totalPayout.gt(0)) {
     set(lastFloatAtom, {
       id: spins,

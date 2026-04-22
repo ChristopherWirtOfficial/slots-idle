@@ -3,7 +3,19 @@ import { atom } from 'jotai';
 import { SlotSymbol, SpinResult } from '../engine/types';
 
 export const pendingResultAtom = atom<SpinResult | null>(null);
-export const lastResultAtom = atom<SpinResult | null>(null);
+
+/**
+ * The most recent committed spin, plus the moment it committed. All
+ * post-commit UI (win highlights, caption, float toast) derives from
+ * this — `committedAt` is a fact about the commit event itself, not
+ * a snapshot of ambient state. See also state/winDisplay.ts which
+ * derives the ripple timeline from this + frameTimeAtom.
+ */
+export interface LastCommit {
+  result: SpinResult;
+  committedAt: number;
+}
+export const lastCommitAtom = atom<LastCommit | null>(null);
 
 export interface FloatEvent {
   id: number;

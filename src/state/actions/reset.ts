@@ -9,7 +9,7 @@ import {
 } from '../economy';
 import { levelsAtom } from '../levels';
 import { highRollerPointsAtom, prestigePendingAtom } from '../prestige';
-import { lastFloatAtom, lastResultAtom, pendingResultAtom } from '../session';
+import { lastCommitAtom, lastFloatAtom, pendingResultAtom } from '../session';
 import { reelAtomsAtom } from '../reels';
 
 const STARTING_CHIPS = () => new Decimal(30);
@@ -24,7 +24,7 @@ export const prestigeActionAtom = atom(null, (get, set) => {
   set(chipsAtom, STARTING_CHIPS());
   set(lifetimeWinningsAtom, ZERO());
   set(levelsAtom, {});
-  set(lastResultAtom, null);
+  set(lastCommitAtom, null);
   set(lastFloatAtom, null);
   set(pendingResultAtom, null);
 
@@ -41,7 +41,7 @@ export const resetActionAtom = atom(null, (get, set) => {
   set(spinsTotalAtom, 0);
   set(highRollerPointsAtom, ZERO());
   set(levelsAtom, {});
-  set(lastResultAtom, null);
+  set(lastCommitAtom, null);
   set(lastFloatAtom, null);
   set(pendingResultAtom, null);
 

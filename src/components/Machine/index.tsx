@@ -15,8 +15,8 @@ import { anyReelSpinningAtom } from '../../state/reels';
 import { canSpinAtom } from '../../state/canSpin';
 import {
   FloatEvent,
+  lastCommitAtom,
   lastFloatAtom,
-  lastResultAtom,
 } from '../../state/session';
 import { spinActionAtom } from '../../state/actions';
 import { FloatingWin } from './FloatingWin';
@@ -24,13 +24,12 @@ import { AutoSpinToggle } from './AutoSpinToggle';
 import { CreditBar } from './CreditBar';
 import { MachineCabinet } from './MachineCabinet';
 import { MachineHeader } from './MachineHeader';
-import { PaylineOverlay } from './PaylineOverlay';
 import { PullButton } from './PullButton';
 import { ReelGrid } from './ReelGrid';
 import { WinSummary } from './WinSummary';
 import { WildRerollPopup } from './WildRerollPopup';
+import { WinOverlays } from './WinOverlays';
 import { useCellCenters } from './useCellCenters';
-import { slotOpacity, useWinDisplay } from './useWinDisplay';
 
 const JACKPOT_SHAKE_MS = 700;
 const FLOAT_TOAST_MS = 1400;
@@ -44,7 +43,7 @@ export function Machine() {
   const bet = useAtomValue(currentBetAtom);
   const spinning = useAtomValue(anyReelSpinningAtom);
   const canSpin = useAtomValue(canSpinAtom);
-  const lastResult = useAtomValue(lastResultAtom);
+  const commit = useAtomValue(lastCommitAtom);
   const lastFloat = useAtomValue(lastFloatAtom);
   const onSpin = useSetAtom(spinActionAtom);
   const ensureAudioReady = useSetAtom(ensureAudioReadyAtom);
@@ -52,13 +51,6 @@ export function Machine() {
   // --- Grid geometry for overlay positioning ---
   const gridRef = useRef<HTMLDivElement>(null);
   const centers = useCellCenters(gridRef, reelCount, config.topology.rowCount);
-
-  // --- Win display: per-win ripple with autospin compression ---
-  const winDisplay = useWinDisplay(spinning, lastResult);
-  const captionWin =
-    winDisplay.captionIdx !== null && lastResult
-      ? lastResult.wins[winDisplay.captionIdx]
-      : null;
 
   // --- Jackpot cabinet shake (triggered by jackpot counter increment) ---
   const [shaking, setShaking] = useState(false);
@@ -82,7 +74,7 @@ export function Machine() {
     return () => window.clearTimeout(t);
   }, [lastFloat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const justWon = Boolean(lastResult && lastResult.totalPayout.gt(0) && !spinning);
+  const justWon = Boolean(commit && commit.result.totalPayout.gt(0) && !spinning);
 
   const handlePull = () => {
     ensureAudioReady();
@@ -107,22 +99,7 @@ export function Machine() {
           <Reel key={i} reelIdx={i} />
         ))}
 
-        {lastResult &&
-          winDisplay.slots.map((slot) => {
-            const win = lastResult.wins[slot.winIdx];
-            if (!win) return null;
-            const opacity = slotOpacity(slot, winDisplay.nowMs);
-            if (opacity <= 0) return null;
-            const highlight = machine.highlightsForWin(win, config);
-            return (
-              <PaylineOverlay
-                key={slot.winIdx}
-                highlight={highlight}
-                centers={centers}
-                opacity={opacity}
-              />
-            );
-          })}
+        <WinOverlays centers={centers} />
 
         {visibleFloat && (
           <FloatingWin
@@ -139,11 +116,7 @@ export function Machine() {
 
       <AutoSpinToggle />
 
-      <WinSummary
-        activeWin={spinning ? null : captionWin}
-        winCount={lastResult?.wins.length ?? 0}
-        activeIdx={winDisplay.captionIdx}
-      />
+      <WinSummary />
     </MachineCabinet>
   );
 }
