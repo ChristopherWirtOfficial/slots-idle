@@ -1,9 +1,9 @@
 import { atom } from 'jotai';
 import { spin } from '../../engine/spin';
 import {
+  Cell,
   Payline,
   ResolvedMachineConfig,
-  SlotSymbol,
   SpinResult,
 } from '../../engine/types';
 import {
@@ -45,6 +45,10 @@ function nowMs(): number {
  * Near-miss detection: any active payline has its first two positions
  * matching without producing a win overall. Triggers a stretched
  * last-reel animation for suspense on possible-but-missed wins.
+ *
+ * Two cells "match" for near-miss purposes if either is a wild, or if
+ * they're the same symbol. A pair of wilds counts — both would have
+ * substituted for whatever came next.
  */
 function detectNearMiss(
   result: SpinResult,
@@ -54,7 +58,8 @@ function detectNearMiss(
   return paylines.some((p) => {
     const a = result.grid[0][p.rows[0]];
     const b = result.grid[1][p.rows[1]];
-    return a.id === b.id;
+    if (a.kind === 'wild' || b.kind === 'wild') return true;
+    return a.symbol.id === b.symbol.id;
   });
 }
 
@@ -65,9 +70,9 @@ function detectNearMiss(
  * new spin needs a window at the new height.
  */
 function reconcileWindow(
-  prev: SlotSymbol[],
-  resultWindow: SlotSymbol[],
-): SlotSymbol[] {
+  prev: Cell[],
+  resultWindow: Cell[],
+): Cell[] {
   if (prev.length === resultWindow.length) return prev;
   return resultWindow.map((_, k) => prev[k] ?? resultWindow[k]);
 }
@@ -109,7 +114,7 @@ export const spinActionAtom = atom(null, (get, set) => {
 
   reelAtoms.forEach((reelAtom, i) => {
     const prev = getCurrentWindow(get(reelAtom));
-    const resultWindow: SlotSymbol[] = [...result.grid[i]];
+    const resultWindow: Cell[] = [...result.grid[i]];
     const nearBonus = nearMiss && i === lastReelIdx ? NEAR_MISS_BONUS_MS : 0;
     const duration = rollDuration(Math.random, nearBonus);
     const distanceCells = rollDistanceCells();

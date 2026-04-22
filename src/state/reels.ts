@@ -1,10 +1,10 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
-import { SlotSymbol } from '../engine/types';
+import { Cell } from '../engine/types';
 import { reelCountAtom } from './machine';
 
 /** A column window — length equals the current machine's rowCount. */
-export type SymWindow = SlotSymbol[];
+export type SymWindow = Cell[];
 
 export type ReelAnimState =
   | { kind: 'resting'; window: SymWindow }
@@ -14,7 +14,7 @@ export type ReelAnimState =
       duration: number;
       distanceCells: number;
       resultWindow: SymWindow;
-      strip: SlotSymbol[];
+      strip: Cell[];
     };
 
 /**

@@ -6,16 +6,15 @@ import {
   resolvedConfigAtom,
   rowCountAtom,
 } from '../state/machine';
-import { SlotSymbol } from '../engine/types';
+import { Cell, SlotSymbol, symbolCell } from '../engine/types';
 
 function defaultWindow(
   symbols: SlotSymbol[],
   rowCount: number,
   reelIdx: number,
-): SlotSymbol[] {
-  return Array.from(
-    { length: rowCount },
-    (_, i) => symbols[(reelIdx + i) % symbols.length],
+): Cell[] {
+  return Array.from({ length: rowCount }, (_, i) =>
+    symbolCell(symbols[(reelIdx + i) % symbols.length]),
   );
 }
 

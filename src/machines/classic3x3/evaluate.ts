@@ -1,17 +1,20 @@
 import Decimal from 'break_infinity.js';
-import { MachineWin, ResolvedMachineConfig, SlotSymbol } from '../../engine/types';
+import { Cell, MachineWin, ResolvedMachineConfig, SlotSymbol } from '../../engine/types';
 import { paylineNameById } from './paylines';
 
 /**
- * Evaluate all active paylines. For each payline, count the longest
- * consecutive-from-left run of the same symbol. If that run length has
- * an entry in the symbol's payouts table, it's a win.
+ * Evaluate all active paylines. For each payline, walk left-to-right:
+ * the first non-wild cell establishes the "anchor" symbol. Subsequent
+ * cells match if they are the same symbol OR a wild. The run ends at
+ * the first cell that doesn't match.
  *
- * This rule naturally extends to grown topologies: a 4-reel machine with
- * 4 matching cherries pays payouts[4]; 3 matching pays payouts[3].
+ * Edge case: if every cell on the line is a wild, the line is emitted
+ * as a wild-only win. The engine resolves it later by rolling a
+ * substitute symbol (luck-weighted). Until then, payout is 0 and
+ * meta.wildOnly = true.
  */
 export function evaluate(ctx: {
-  grid: SlotSymbol[][];
+  grid: Cell[][];
   config: ResolvedMachineConfig;
   bet: number;
   globalMult: Decimal;
@@ -20,19 +23,46 @@ export function evaluate(ctx: {
   const wins: MachineWin[] = [];
 
   for (const payline of config.paylines) {
-    // Gather the symbol at each column along this payline.
-    const lineSyms: SlotSymbol[] = payline.rows.map((row, col) => grid[col][row]);
-    if (lineSyms.length === 0) continue;
+    const lineCells: Cell[] = payline.rows.map((row, col) => grid[col][row]);
+    if (lineCells.length === 0) continue;
 
-    // Count consecutive matches starting from column 0.
-    const first = lineSyms[0];
-    let matchCount = 1;
-    for (let i = 1; i < lineSyms.length; i++) {
-      if (lineSyms[i].id === first.id) matchCount++;
-      else break;
+    // Find the anchor — first non-wild cell. If there isn't one, the
+    // entire line is wild, which is a special case handled below.
+    const anchorIdx = lineCells.findIndex((c) => c.kind !== 'wild');
+
+    if (anchorIdx === -1) {
+      // Wild-only line. Emit with a placeholder symbol (first config
+      // symbol) — the reroll will replace this before payout commits.
+      wins.push({
+        name: paylineNameById(payline.id),
+        symbol: config.symbols[0],
+        payout: new Decimal(0),
+        isJackpot: false,
+        meta: { paylineId: payline.id, matchCount: lineCells.length, wildOnly: true },
+      });
+      continue;
     }
 
-    const multiplier = first.payouts[matchCount];
+    // The anchor must be a symbol cell since anchorIdx !== -1.
+    const anchor = lineCells[anchorIdx] as Extract<Cell, { kind: 'symbol' }>;
+    const anchorSymbol: SlotSymbol = anchor.symbol;
+
+    // Walk from col 0 counting consecutive matches. A wild matches
+    // anything; a symbol cell must equal the anchor. If the anchor
+    // isn't at col 0 (i.e. wilds precede it), those wilds count toward
+    // the run too, since they substitute for the anchor symbol.
+    let matchCount = 0;
+    for (const cell of lineCells) {
+      if (cell.kind === 'wild') {
+        matchCount++;
+      } else if (cell.symbol.id === anchorSymbol.id) {
+        matchCount++;
+      } else {
+        break;
+      }
+    }
+
+    const multiplier = anchorSymbol.payouts[matchCount];
     if (multiplier === undefined || multiplier === 0) continue;
 
     // bet × symbolMult is small-bounded (max ~51 × 1800 = 91,800) — stay number
@@ -40,11 +70,12 @@ export function evaluate(ctx: {
     const payout = globalMult.mul(bet * multiplier).floor();
     if (payout.lte(0)) continue;
 
-    const isJackpot = first.id === 'seven' && matchCount === lineSyms.length;
+    const isJackpot =
+      anchorSymbol.id === 'seven' && matchCount === lineCells.length;
 
     wins.push({
       name: paylineNameById(payline.id),
-      symbol: first,
+      symbol: anchorSymbol,
       payout,
       isJackpot,
       meta: { paylineId: payline.id, matchCount },

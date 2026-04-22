@@ -11,7 +11,7 @@ import {
 import { rowCountAtom } from '../state/machine';
 import { easeOut, velocityCellsPerFrame } from '../engine/animation';
 import { theme } from '../theme';
-import { SlotSymbol } from '../engine/types';
+import { Cell } from '../engine/types';
 import { sfxReelTick } from '../audio/sfx';
 
 const ReelFrame = styled.div`
@@ -50,7 +50,7 @@ const Strip = styled.div`
   will-change: transform;
 `;
 
-const Cell = styled.div<{ color: string }>`
+const CellBox = styled.div<{ color: string }>`
   width: 100%;
   height: var(--cell-h);
   display: flex;
@@ -66,15 +66,24 @@ const Cell = styled.div<{ color: string }>`
     0 0 10px ${(p) => p.color}55;
 `;
 
-function CellView({ symbol }: { symbol: SlotSymbol }) {
-  return <Cell color={symbol.color}>{symbol.glyph}</Cell>;
+/**
+ * Render one grid cell. Symbol cells show the symbol glyph/color.
+ * Wild cells render with a placeholder star — visual is finalized
+ * when the wild feature lands; for now any wild cell that happens to
+ * appear will still render legibly.
+ */
+function CellView({ cell }: { cell: Cell }) {
+  if (cell.kind === 'wild') {
+    return <CellBox color={theme.color.goldBright}>★</CellBox>;
+  }
+  return <CellBox color={cell.symbol.color}>{cell.symbol.glyph}</CellBox>;
 }
 
 function RestingWindow({ window }: { window: SymWindow }) {
   return (
     <Strip>
-      {window.map((s, i) => (
-        <CellView key={i} symbol={s} />
+      {window.map((c, i) => (
+        <CellView key={i} cell={c} />
       ))}
     </Strip>
   );
@@ -109,8 +118,8 @@ function SpinningReel({
         filter: blurPx > 0.1 ? `blur(${blurPx.toFixed(2)}px)` : 'none',
       } as CSSProperties}
     >
-      {state.strip.map((sym, i) => (
-        <CellView key={i} symbol={sym} />
+      {state.strip.map((c, i) => (
+        <CellView key={i} cell={c} />
       ))}
     </Strip>
   );

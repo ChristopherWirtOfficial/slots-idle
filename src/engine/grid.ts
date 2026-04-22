@@ -1,4 +1,4 @@
-import { ResolvedMachineConfig, SlotSymbol } from './types';
+import { Cell, ResolvedMachineConfig, SlotSymbol, symbolCell } from './types';
 
 /**
  * Coefficient on the exponential luck-rarity pressure. Higher = more
@@ -49,18 +49,73 @@ export function rollSymbol(
   return symbols[0];
 }
 
+/**
+ * Context a roll step sees. Anything a future step might want to read
+ * (position on the grid, current column, etc) goes here. Steps are
+ * pure functions of this context.
+ */
+export interface RollContext {
+  config: ResolvedMachineConfig;
+  luck: number;
+  rng: () => number;
+}
+
+/**
+ * A roll step tries to claim a cell. If it returns a Cell, the pipeline
+ * stops. If it returns null, we fall through to the next step.
+ *
+ * Keeps cell composition declarative: each step owns one mechanic, no
+ * step knows about the others. Order in the pipeline is the priority.
+ */
+export type RollStep = (ctx: RollContext) => Cell | null;
+
+/**
+ * The default symbol step — always claims. Rolls a weighted symbol
+ * with luck pressure over the machine's regular symbol pool.
+ *
+ * This is the terminal step in any pipeline: it always returns a cell,
+ * so execution never falls off the end.
+ */
+export const symbolStep: RollStep = ({ config, luck, rng }) => {
+  return symbolCell(rollSymbol(config.symbols, luck, rng));
+};
+
+/**
+ * Run the pipeline to produce a single cell. First step to claim wins.
+ * The symbolStep must be in the pipeline (else nothing's guaranteed to
+ * claim); in practice it's always last.
+ */
+export function rollCell(steps: RollStep[], ctx: RollContext): Cell {
+  for (const step of steps) {
+    const cell = step(ctx);
+    if (cell !== null) return cell;
+  }
+  // Shouldn't happen if symbolStep is in the pipeline. Defensive
+  // fallback: use the first configured symbol so we never return
+  // undefined from a hot path.
+  return symbolCell(ctx.config.symbols[0]);
+}
+
+/**
+ * The default roll pipeline. Future features (wilds, scatters, sticky)
+ * prepend or insert steps here.
+ */
+const DEFAULT_STEPS: RollStep[] = [symbolStep];
+
 /** Generate a fresh grid [reelCount][rowCount]. Machine-neutral. */
 export function generateGrid(
   config: ResolvedMachineConfig,
   luck: number,
   rng: () => number = Math.random,
-): SlotSymbol[][] {
+  steps: RollStep[] = DEFAULT_STEPS,
+): Cell[][] {
   const { reelCount, rowCount } = config.topology;
-  const grid: SlotSymbol[][] = [];
+  const ctx: RollContext = { config, luck, rng };
+  const grid: Cell[][] = [];
   for (let col = 0; col < reelCount; col++) {
-    const column: SlotSymbol[] = [];
+    const column: Cell[] = [];
     for (let row = 0; row < rowCount; row++) {
-      column.push(rollSymbol(config.symbols, luck, rng));
+      column.push(rollCell(steps, ctx));
     }
     grid.push(column);
   }

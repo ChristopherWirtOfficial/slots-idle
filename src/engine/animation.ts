@@ -1,4 +1,4 @@
-import { SlotSymbol } from './types';
+import { Cell, SlotSymbol, symbolCell } from './types';
 import { rollSymbol } from './grid';
 
 // Per-reel duration bounds. Bumped from 1.1-2.2s — the faster range was
@@ -76,22 +76,26 @@ export function velocityCellsPerFrame(
 }
 
 /**
- * Build the strip of symbols a reel will scroll through.
+ * Build the strip of cells a reel will scroll through.
  * Strip layout: [...prevWindow, ...random fill, ...resultWindow].
  * Window length comes from the caller (= machine.rowCount), so this
  * works for any vertical reel size.
+ *
+ * The random fill is symbols only — the visual blur during a spin
+ * doesn't need to show wilds or other cell kinds. We roll with luck=0
+ * here; filler is cosmetic and shouldn't consume the player's luck.
  */
 export function buildStrip(
-  prevWindow: SlotSymbol[],
-  resultWindow: SlotSymbol[],
+  prevWindow: Cell[],
+  resultWindow: Cell[],
   distanceCells: number,
   symbols: SlotSymbol[],
   rng: () => number = Math.random,
-): SlotSymbol[] {
+): Cell[] {
   const rowCount = prevWindow.length;
-  const strip: SlotSymbol[] = [...prevWindow];
+  const strip: Cell[] = [...prevWindow];
   for (let i = rowCount; i < distanceCells; i++) {
-    strip.push(rollSymbol(symbols, 0, rng));
+    strip.push(symbolCell(rollSymbol(symbols, 0, rng)));
   }
   strip.push(...resultWindow);
   return strip;

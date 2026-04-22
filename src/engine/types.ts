@@ -18,6 +18,20 @@ export interface SlotSymbol {
   payouts: Record<number, number>;
 }
 
+/**
+ * What a single grid position rolled to. Symbol cells are the default;
+ * other kinds can be composed in via grid generation (wilds, scatters,
+ * etc). Consumers match on `kind` — never assume symbol.
+ */
+export type Cell =
+  | { kind: 'symbol'; symbol: SlotSymbol }
+  | { kind: 'wild' };
+
+/** Convenience constructor so call sites read as data, not type ceremony. */
+export function symbolCell(symbol: SlotSymbol): Cell {
+  return { kind: 'symbol', symbol };
+}
+
 export interface CellPosition {
   col: number;
   row: number;
@@ -132,7 +146,7 @@ export interface Machine {
    * grid shape: [col][row]
    */
   evaluate(ctx: {
-    grid: SlotSymbol[][];
+    grid: Cell[][];
     config: ResolvedMachineConfig;
     bet: number;
     globalMult: Decimal;
@@ -157,7 +171,7 @@ export interface Machine {
 
 /** Engine-level spin result before commit. */
 export interface SpinResult {
-  grid: SlotSymbol[][];
+  grid: Cell[][];
   wins: MachineWin[];
   totalPayout: Decimal;
   hasJackpot: boolean;
