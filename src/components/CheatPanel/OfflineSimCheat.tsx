@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
+import { disablePersistence, writeLastTickAt } from '../../hooks/useCatchUp';
 
 const Block = styled.div`
   display: flex;
@@ -47,8 +48,6 @@ const Note = styled.div`
   text-transform: uppercase;
 `;
 
-const KEY = 'lucky-idle-slots:v1:lastTickAt';
-
 const presets: Array<{ label: string; minutes: number }> = [
   { label: '5m', minutes: 5 },
   { label: '30m', minutes: 30 },
@@ -58,19 +57,15 @@ const presets: Array<{ label: string; minutes: number }> = [
 
 /**
  * Dev tool: backdate the persisted lastTickAt by N minutes and reload
- * the page. Triggers the next session's useCatchUp to replay that
- * gap. 2h tests the offline cap (>1h gets clamped to 1h).
- *
- * Writes localStorage directly rather than going through jotai —
- * atomWithStorage's write path would sync back to the atom but we
- * want the value to land before the reload happens regardless of
- * React scheduling.
+ * the page. Triggers the next session's useCatchUp to replay that gap.
+ * 2h tests the offline cap (>1h gets clamped to 1h).
  */
 export function OfflineSimCheat() {
   const simulate = (minutes: number) => {
-    const backdated = Date.now() - minutes * 60 * 1000;
-    // atomWithStorage stores values as JSON strings.
-    localStorage.setItem(KEY, JSON.stringify(backdated));
+    // Prevent the persistence writer's beforeunload handler from
+    // clobbering the backdated timestamp when the reload below fires.
+    disablePersistence();
+    writeLastTickAt(Date.now() - minutes * 60 * 1000);
     window.location.reload();
   };
 

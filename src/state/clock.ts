@@ -50,3 +50,18 @@ export const effectiveNowAtom = atom<number>((get) => {
  * directly, bypassing the gate (it IS the catch-up process).
  */
 export const caughtUpAtom = atom(false);
+
+/**
+ * Fact-of-record for an in-flight catch-up replay: the virtual-time
+ * window being replayed. `startMs` is where virtualNow began, `endMs`
+ * is where it's headed. Null when no replay is active.
+ *
+ * The modal derives progress from this + virtualNowAtom — it doesn't
+ * need its own progress atom, since progress is a pure function of
+ * "how far has the clock moved through the range."
+ */
+export interface CatchUpRange {
+  readonly startMs: number;
+  readonly endMs: number;
+}
+export const catchUpRangeAtom = atom<CatchUpRange | null>(null);
