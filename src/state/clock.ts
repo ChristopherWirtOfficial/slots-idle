@@ -37,3 +37,16 @@ export const effectiveNowAtom = atom<number>((get) => {
   const v = get(virtualNowAtom);
   return v !== null ? v : get(realNowAtom);
 });
+
+/**
+ * Has the game caught up to wall-clock since it was loaded? Default
+ * false — we start every session behind until the catch-up routine
+ * runs. Flipped true either instantly (no meaningful offline time) or
+ * after virtual-time replay completes.
+ *
+ * Tick functors are gated on this: nothing fires until it's true. The
+ * setTimeout pulse keeps running either way, but tick() no-ops while
+ * caughtUp is false. Catch-up drives ticks manually by calling tick()
+ * directly, bypassing the gate (it IS the catch-up process).
+ */
+export const caughtUpAtom = atom(false);

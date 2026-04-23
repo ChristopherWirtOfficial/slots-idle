@@ -1,6 +1,6 @@
 import { MAX_QUEUED_TICKS, TICK_LENGTH } from './knobs';
 import { getDefaultStore } from 'jotai';
-import { realNowAtom } from '../state/clock';
+import { caughtUpAtom, realNowAtom } from '../state/clock';
 
 export interface TickFunctor {
   readonly id: string;
@@ -37,7 +37,13 @@ export function registerFunctor(f: TickFunctor): () => void {
   };
 }
 
-function tick(): void {
+/**
+ * Run one tick: iterate registered functors (respecting frequency
+ * skips), calling each. Does NOT gate on caughtUp — callers decide
+ * whether a tick should fire. The setTimeout pulse below gates;
+ * catch-up drivers call this directly to drive virtual time.
+ */
+export function tick(): void {
   const toRun = tickFunctors.filter((f) => functorsToSkipMap[f.id] === 0);
 
   for (const f of tickFunctors) {
@@ -55,6 +61,18 @@ function tick(): void {
 }
 
 function pulse(): void {
+  // Boot gate: until the session has caught up with wall-clock, the
+  // setTimeout pulse does nothing. The catch-up driver will run
+  // synthetic ticks itself and then flip caughtUpAtom true, releasing
+  // the pulse to drive live play from that moment forward.
+  const store = getDefaultStore();
+  if (!store.get(caughtUpAtom)) {
+    // Keep lastTickTime fresh so the first live pulse after catch-up
+    // doesn't try to replay a huge elapsed window through MAX_QUEUED_TICKS.
+    lastTickTime = now();
+    return;
+  }
+
   frameCount++;
 
   const currentTickTime = now();

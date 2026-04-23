@@ -9,11 +9,13 @@ import { Paytable } from './components/Paytable';
 import { theme } from './theme';
 import { startTickLoop } from './tick/loop';
 import { useAutospin } from './hooks/useAutospin';
+import { useCatchUp } from './hooks/useCatchUp';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
 import { useAnimationTick } from './hooks/useAnimationTick';
 import { useReelSync } from './hooks/useReelSync';
 import { VolumeControl } from './components/VolumeControl';
 import { CheatPanel } from './components/CheatPanel';
+import { OfflineReturnModal } from './components/OfflineReturnModal';
 
 const globalStyles = css`
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Cormorant+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -166,10 +168,15 @@ const Footer = styled.footer`
  * components, which read atoms directly. App doesn't drill props.
  */
 export function App() {
-  // Start the tick loop once on mount.
+  // Start the tick loop once on mount. The pulse gates on caughtUpAtom
+  // until useCatchUp resolves — nothing ticks live until catch-up's done.
   useEffect(() => {
     startTickLoop();
   }, []);
+
+  // One-time catch-up on session start: reads persisted lastTickAt,
+  // replays offline time through virtual ticks, flips caughtUp true.
+  useCatchUp();
 
   // Subscribes autospin to the tick loop at upgrade-derived frequency.
   useAutospin();
@@ -189,6 +196,7 @@ export function App() {
       <Global styles={globalStyles} />
       <VolumeControl />
       <CheatPanel />
+      <OfflineReturnModal />
       <Page>
         <TopBanner>
           <BrandLine>An evening's diversion</BrandLine>
