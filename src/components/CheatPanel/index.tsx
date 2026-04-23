@@ -4,6 +4,7 @@ import { useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { anyCheatActiveAtom } from '../../state/cheats';
 import { LuckCheat } from './LuckCheat';
+import { OfflineSimCheat } from './OfflineSimCheat';
 import { ResetCheat } from './ResetCheat';
 import { WildCheat } from './WildCheat';
 
@@ -97,6 +98,7 @@ export function CheatPanel() {
         <Body>
           <LuckCheat />
           <WildCheat />
+          <OfflineSimCheat />
           <ResetCheat />
         </Body>
       )}
