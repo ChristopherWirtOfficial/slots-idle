@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
-import { Cell } from '../engine/types';
-import { reelCountAtom } from './machine';
+import { Cell, SlotSymbol, symbolCell } from '../engine/types';
+import { reelCountAtom, rowCountAtom, symbolsAtom } from './machine';
 
 /** A column window — length equals the current machine's rowCount. */
 export type SymWindow = Cell[];
@@ -18,17 +18,57 @@ export type ReelAnimState =
     };
 
 /**
- * One atom per reel index. The factory can't read other atoms at creation
- * time, so initial state is `resting` with an empty window. An init effect
- * (useReelSync) populates each reel with default symbols on App mount and
- * whenever topology changes.
- *
- * Family entries persist across topology shrinks (orphaned atoms remain
- * cached but unused). Acceptable — prestige/reset are rare events.
+ * Default "never been spun" window for a given reel. Offset by reelIdx
+ * so the initial grid doesn't display a single symbol in every column.
  */
-export const reelStateAtomFamily = atomFamily((_reelIdx: number) =>
-  atom<ReelAnimState>({ kind: 'resting', window: [] }),
-);
+function defaultRestingWindow(
+  symbols: SlotSymbol[],
+  rowCount: number,
+  reelIdx: number,
+): SymWindow {
+  if (symbols.length === 0 || rowCount === 0) return [];
+  return Array.from({ length: rowCount }, (_, i) =>
+    symbolCell(symbols[(reelIdx + i) % symbols.length]),
+  );
+}
+
+/**
+ * One writable-derived atom per reel index.
+ *
+ * Before the reel has ever been spun (or after an explicit reset to
+ * null), the atom reads as a default resting window computed from
+ * current symbols + rowCount + reelIdx. Once written — at spin-start
+ * or commit-landing — the stored value wins; reads return exactly
+ * what was written.
+ *
+ * This shape eliminates the mount-time sync effect that used to
+ * populate initial windows, and lets the render path read a valid
+ * ReelAnimState on the very first render. "Empty window" is no longer
+ * a sentinel for "not yet initialized"; the derivation handles it.
+ *
+ * Topology-changing upgrades (currently disabled: extraRow, extraReel)
+ * would need buyUpgradeAtom to reset these base atoms to null when
+ * purchased, so reads recompute against the new rowCount/reelIdx.
+ * Until those upgrades ship, that reset isn't wired.
+ */
+export const reelStateAtomFamily = atomFamily((reelIdx: number) => {
+  const base = atom<ReelAnimState | null>(null);
+  return atom(
+    (get): ReelAnimState => {
+      const stored = get(base);
+      if (stored !== null) return stored;
+      return {
+        kind: 'resting',
+        window: defaultRestingWindow(
+          get(symbolsAtom),
+          get(rowCountAtom),
+          reelIdx,
+        ),
+      };
+    },
+    (_get, set, update: ReelAnimState) => set(base, update),
+  );
+});
 
 /**
  * Array of the currently-active reel atoms, length = reelCount.

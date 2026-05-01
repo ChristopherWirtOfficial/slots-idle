@@ -10,7 +10,6 @@ import { useAutospin } from './hooks/useAutospin';
 import { useCatchUp } from './hooks/useCatchUp';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
 import { useAnimationTick } from './hooks/useAnimationTick';
-import { useReelSync } from './hooks/useReelSync';
 import { useReelTickAudio } from './hooks/useReelTickAudio';
 import { VolumeControl } from './components/VolumeControl';
 import { CheatPanel } from './components/CheatPanel';
@@ -183,10 +182,6 @@ export function App() {
 
   // Reel-tick audio: fire sfx when a spinning reel crosses integer cells.
   useReelTickAudio();
-
-  // Keep reel windows in sync with the current topology (reelCount × rowCount).
-  // Fills initial windows on mount and handles topology changes from upgrades.
-  useReelSync();
 
   return (
     <>
