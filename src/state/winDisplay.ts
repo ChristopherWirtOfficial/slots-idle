@@ -120,38 +120,74 @@ export function slotOpacity(slot: WinSlot, elapsedMs: number): number {
  */
 export const LINE_FLOAT_DURATION_MS = 1100;
 
+/**
+ * Maximum lean from vertical, in radians. Each float picks a random-
+ * looking (but deterministic) angle in [-MAX_LEAN, +MAX_LEAN].
+ */
+const MAX_FLOAT_LEAN_RAD = 0.26; // ~15°
+
+/** Pixels the float reaches at t=1 along its drift axis. */
+const FLOAT_TERMINAL_RISE = 48;
+
 export interface LineFloatAnim {
   /** 0..1 progress through the float's lifetime. */
   t: number;
   /** 0..1 opacity — fade in quickly, hold, fade out. */
   opacity: number;
-  /** Pixels the toast has risen from its anchor. */
+  /** Pixels the toast has risen (positive = up). */
   riseY: number;
+  /** Pixels of horizontal drift (positive = right). */
+  driftX: number;
 }
 
 /**
- * Pure: given a slot's startMs and the current elapsed time, compute
- * the float's animation state. Returns null when the float is not
- * currently visible (before start or after end). No atom reads — this
- * is called by the render component per frame with values from atoms.
+ * Deterministic, well-spread angle from a seed. Uses a simple hash
+ * to avoid adjacent winIdxs leaning the same way. Returns radians
+ * in [-MAX_FLOAT_LEAN_RAD, +MAX_FLOAT_LEAN_RAD].
+ */
+export function floatLeanAngle(seed: number): number {
+  const mixed = ((seed * 2654435761) ^ ((seed >>> 13) * 40503)) >>> 0;
+  const unit = (mixed % 10000) / 10000;
+  return (unit - 0.5) * 2 * MAX_FLOAT_LEAN_RAD;
+}
+
+/**
+ * Pure: given a slot's startMs, the current elapsed time, and a
+ * per-float lean angle, compute the float's animation state. Returns
+ * null when the float is not currently visible.
+ *
+ * Motion shape: the vertical rise follows a fast ease-out to
+ * FLOAT_TERMINAL_RISE; horizontal drift ramps in with t^2 so the
+ * float launches near-vertical and curves toward its final heading
+ * asymptotically. Reads as 'drifts off at an angle' rather than
+ * 'launches diagonally.'
  */
 export function lineFloatAnim(
   slotStartMs: number,
   elapsedMs: number,
+  leanAngleRad: number = 0,
   durationMs: number = LINE_FLOAT_DURATION_MS,
 ): LineFloatAnim | null {
   if (elapsedMs < slotStartMs) return null;
   const local = elapsedMs - slotStartMs;
   if (local >= durationMs) return null;
   const t = local / durationMs;
-  // Fade: fast in (0-12%), plateau (12-70%), slow out (70-100%)
+
+  // Fade: fast in (0-12%), plateau (12-70%), slow out (70-100%).
   let opacity: number;
   if (t < 0.12) opacity = t / 0.12;
   else if (t < 0.7) opacity = 1;
   else opacity = 1 - (t - 0.7) / 0.3;
-  // Rise: eased toward a 40px target
-  const riseY = 40 * (1 - Math.pow(1 - t, 2));
-  return { t, opacity, riseY };
+
+  // Rise eases out to terminal quickly; horizontal lags (t²) so the
+  // float launches near-vertical and curves into its lean.
+  const riseMagnitude = FLOAT_TERMINAL_RISE * (1 - Math.pow(1 - t, 2));
+  const lateralMagnitude = FLOAT_TERMINAL_RISE * (t * t);
+
+  const riseY = riseMagnitude * Math.cos(leanAngleRad);
+  const driftX = lateralMagnitude * Math.sin(leanAngleRad);
+
+  return { t, opacity, riseY, driftX };
 }
 
 /**

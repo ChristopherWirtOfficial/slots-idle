@@ -10,6 +10,7 @@ import {
 import { activeMachineAtom, resolvedConfigAtom } from '../../state/machine';
 import { lastCommitAtom } from '../../state/session';
 import {
+  floatLeanAngle,
   lineFloatAnim,
   winElapsedMsAtom,
   winSlotsAtom,
@@ -121,7 +122,12 @@ export function LineFloats({ centers, bet }: LineFloatsProps) {
   return (
     <>
       {slots.map((slot) => {
-        const anim = lineFloatAnim(slot.startMs, elapsedMs);
+        // Per-float lean angle: deterministic from commit + winIdx so
+        // it's stable across re-renders within a spin, and different
+        // per-line so floats drift in varied directions. Pipes into
+        // lineFloatAnim which curves the float toward that heading.
+        const leanAngle = floatLeanAngle(commit.committedAt + slot.winIdx);
+        const anim = lineFloatAnim(slot.startMs, elapsedMs, leanAngle);
         if (anim === null) return null;
         const win = commit.result.wins[slot.winIdx];
         if (!win) return null;
@@ -146,7 +152,7 @@ export function LineFloats({ centers, bet }: LineFloatsProps) {
         const offsetPct = horizontalOffsetPct(paylineIdx, config.paylines.length);
 
         const style: CSSProperties = {
-          left: `calc(${anchor.x}% + ${offsetPct}%)`,
+          left: `calc(${anchor.x}% + ${offsetPct}% + ${anim.driftX}px)`,
           top: `calc(${anchor.y}% - ${anim.riseY}px)`,
           opacity: anim.opacity,
           fontSize: FONT_SIZE[tier],
