@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
 import { useAtomValue } from 'jotai';
-import { CSSProperties, useEffect, useRef } from 'react';
+import { CSSProperties } from 'react';
 import {
   ReelAnimState,
   reelStateAtomFamily,
@@ -12,7 +12,6 @@ import { rowCountAtom, wildAtom } from '../state/machine';
 import { easeOut, velocityCellsPerFrame } from '../engine/animation';
 import { theme } from '../theme';
 import { Cell, WildConfig } from '../engine/types';
-import { sfxReelTick } from '../audio/sfx';
 
 const ReelFrame = styled.div`
   --cell-h: clamp(62px, 18vw, 100px);
@@ -101,15 +100,6 @@ function SpinningReel({
 
   const vel = velocityCellsPerFrame(t, state.distanceCells, state.duration);
   const blurPx = Math.min(10, vel * 6);
-
-  const lastCellIntRef = useRef(0);
-  useEffect(() => {
-    const intCells = Math.floor(cellsScrolled);
-    if (intCells > lastCellIntRef.current && vel > 0.02) {
-      sfxReelTick(vel);
-      lastCellIntRef.current = intCells;
-    }
-  });
 
   return (
     <Strip

@@ -11,6 +11,7 @@ import { useCatchUp } from './hooks/useCatchUp';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
 import { useAnimationTick } from './hooks/useAnimationTick';
 import { useReelSync } from './hooks/useReelSync';
+import { useReelTickAudio } from './hooks/useReelTickAudio';
 import { VolumeControl } from './components/VolumeControl';
 import { CheatPanel } from './components/CheatPanel';
 import { OfflineReturnModal } from './components/OfflineReturnModal';
@@ -179,6 +180,9 @@ export function App() {
 
   // Drives reel animations: frame time, landings, payout commit.
   useAnimationTick();
+
+  // Reel-tick audio: fire sfx when a spinning reel crosses integer cells.
+  useReelTickAudio();
 
   // Keep reel windows in sync with the current topology (reelCount × rowCount).
   // Fills initial windows on mount and handles topology changes from upgrades.

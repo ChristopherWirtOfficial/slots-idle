@@ -5,4 +5,4 @@
 export { spinActionAtom, animationTickAtom } from './spin';
 export { buyUpgradeAtom } from './buying';
 export { prestigeActionAtom, resetActionAtom } from './reset';
-export { passiveIncomeTickAtom } from './ticks';
+export { passiveIncomeTickAtom, reelTickAudioTickAtom } from './ticks';
