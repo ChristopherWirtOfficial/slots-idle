@@ -18,12 +18,14 @@ const result = await esbuild.build({
 });
 
 const js = result.outputFiles[0].text;
+const nonce = Date.now().toString(36);
 
 const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="build-nonce" content="${nonce}" />
 <title>Lucky Idle Slots</title>
 <style>
   html,body,#root{margin:0;padding:0;height:100%;width:100%;background:#0a0511;}
