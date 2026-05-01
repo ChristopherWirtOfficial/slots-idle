@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import styled from '@emotion/styled';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ensureAudioReadyAtom,
   mutedAtom,
@@ -9,6 +9,7 @@ import {
   setVolumeAtom,
   volumeAtom,
 } from '../state/audio';
+import { useDismissOnOutside } from '../hooks/useDismissOnOutside';
 import { theme } from '../theme';
 
 const Wrap = styled.div`
@@ -116,23 +117,7 @@ export function VolumeControl() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useDismissOnOutside(wrapRef, open, () => setOpen(false));
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     ensureAudioReady();

@@ -1,13 +1,11 @@
 /** @jsxImportSource @emotion/react */
 import { Global, css } from '@emotion/react';
 import styled from '@emotion/styled';
-import { useEffect } from 'react';
 import { Machine } from './components/Machine';
 import { UpgradesPanel } from './components/UpgradesPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { Paytable } from './components/Paytable';
 import { theme } from './theme';
-import { startTickLoop } from './tick/loop';
 import { useAutospin } from './hooks/useAutospin';
 import { useCatchUp } from './hooks/useCatchUp';
 import { usePassiveIncome } from './hooks/usePassiveIncome';
@@ -168,14 +166,9 @@ const Footer = styled.footer`
  * components, which read atoms directly. App doesn't drill props.
  */
 export function App() {
-  // Start the tick loop once on mount. The pulse gates on caughtUpAtom
-  // until useCatchUp resolves — nothing ticks live until catch-up's done.
-  useEffect(() => {
-    startTickLoop();
-  }, []);
-
   // One-time catch-up on session start: reads persisted lastTickAt,
   // replays offline time through virtual ticks, flips caughtUp true.
+  // The tick loop (started in main.tsx) no-ops until this resolves.
   useCatchUp();
 
   // Subscribes autospin to the tick loop at upgrade-derived frequency.
