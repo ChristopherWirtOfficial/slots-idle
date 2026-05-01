@@ -20,15 +20,17 @@ npm run build:single   # dist/index.html — one inlined HTML file (overwrites V
 
 ## GitHub Pages
 
-1. Repo **Settings → Pages**: set **Source** to **GitHub Actions** (not “Deploy from a branch”).
-2. Push to `main`; the workflow in `.github/workflows/deploy-pages.yml` builds with Vite and publishes `dist/`.
+1. Repo **Settings → Pages**: under **Build and deployment**, set **Source** to **GitHub Actions** (not “Deploy from a branch”). If this is still “branch,” deploy will fail with **404** when creating a Pages deployment.
+2. Push to `main` (or re-run the workflow from the **Actions** tab after changing settings).
 
 The app uses a relative asset base (`./`) so it works at `https://<user>.github.io/<repo>/` without editing the repo name in config.
 
 ## Architecture
 
-- `src/game/` — pure logic: symbols, spin math, upgrade defs
-- `src/tick/` — fixed-timestep tick loop + `useTick` / `useAtomicTick` hooks
-- `src/state/` — jotai atoms split by concern (economy, upgrades, prestige, session, actions)
-- `src/hooks/` — `useAutospin`, `usePassiveIncome` — bind action atoms to tick frequencies
-- `src/components/` — React components (emotion for styles)
+- `src/engine/` — spin math, grid, animation helpers
+- `src/machines/` — machine configs (e.g. fruit machine symbols, paylines, evaluate)
+- `src/tick/` — fixed-timestep tick loop + `useTick`
+- `src/state/` — jotai atoms (economy, upgrades, prestige, session, actions)
+- `src/hooks/` — autospin, passive income, audio, catch-up
+- `src/components/` — React UI (Emotion)
+- `sim/` — Node/tsx CLI sims and analysis (optional; not part of the web build)
