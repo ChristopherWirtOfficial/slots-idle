@@ -188,3 +188,59 @@ time without explicit tuning.
   strategic branching before this will improve.
 - Current inter-purchase gap: ~5 min median — too long for early
   game; should be ~1-2 min for the first 30 minutes.
+
+## Machines
+
+Each machine is a self-contained folder under `src/machines/`,
+implementing the `Machine` interface from `engine/types.ts`:
+
+- `id` — stable string, not persisted anywhere user-visible; safe to
+  rename until we ever expose runtime machine-switching.
+- `name` — user-facing brand (e.g. "Lucky Parlour"). This is the
+  machine's in-world presentation, distinct from the code-level type
+  (the fruit machine IS a fruit machine regardless of what it calls
+  itself).
+- `resolveConfig(levels)` — given the global levels map, produce the
+  machine's current `ResolvedMachineConfig` (topology, symbols, wild
+  config, paylines or cluster rules or whatever).
+- `evaluate(ctx)` — given a grid + config + bet + globalMult, return
+  a `MachineWin[]`. The engine is machine-agnostic; this function
+  owns the rules.
+- `highlightsForWin(win, config)` — turn a win into highlighted cells
+  (for overlays) + optional line polyline.
+- `upgrades` — machine-specific upgrades. Merged with `GLOBAL_UPGRADES`
+  at runtime. Globals (bet, multiplier, passive, wild chance, autospin)
+  are uniform across machines; machine-specific ones (e.g. extraReel,
+  extraRow, or a future machine's unique mechanics) live here.
+
+**To add a new machine:**
+1. Create `src/machines/<name>/` with `index.ts`, `symbols.ts`, and
+   whatever evaluation files make sense (payline-based machines want
+   a `paylines.ts` + `evaluate.ts` + `highlights.ts`; a cluster or
+   tumble machine would structure differently).
+2. Export the machine from `index.ts`.
+3. Append to `MACHINES` in `registry.ts`. For now `ACTIVE_MACHINE` is
+   still hardcoded to `MACHINES[0]`; swapping the active machine is
+   a one-line change until runtime switching becomes a real feature.
+
+**What's already prepped:**
+- The engine doesn't know or care what "paylines" means — the fruit
+  machine happens to use paylines, but the `Machine.evaluate` signature
+  would let a cluster-pays or tumble machine slot in without engine
+  changes.
+- `SpinResult.wins` is an opaque `MachineWin[]` with a free-form
+  `meta` field; machine-specific metadata (paylineId, cluster id,
+  tumble chain depth) all fit.
+- UI components read from atoms that resolve against the active
+  machine; nothing reaches into machine-specific files. Adding a
+  new machine doesn't touch `components/`.
+
+**What's not prepped (deferred):**
+- Runtime machine-switching. The active machine is boot-constant.
+- Per-machine persistence. Levels, chips, etc. are global today.
+  If machines have materially different economies, we'll need to
+  decide: carry progress across, or silo per-machine? That decision
+  is premature until we have a second machine to inform it.
+- UI variance. The reel-grid renderer assumes reel-based machines.
+  A dice/pachinko/card-based machine would need its own render path.
+  Crossing that bridge when we get there.

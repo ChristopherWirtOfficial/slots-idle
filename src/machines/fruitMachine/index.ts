@@ -1,6 +1,6 @@
 import { Machine, ResolvedMachineConfig, UpgradeDef } from '../../engine/types';
 import { GLOBAL_UPGRADES } from '../../engine/upgrades';
-import { CLASSIC_SYMBOLS } from './symbols';
+import { FRUIT_SYMBOLS } from './symbols';
 import { paylinesForTopology } from './paylines';
 import { evaluate } from './evaluate';
 import { highlightsForWin } from './highlights';
@@ -18,7 +18,7 @@ const BASE_ROW_COUNT = 3;
  * Interpretation (what level maps to what effect) happens in this
  * machine's resolveConfig — the engine just tracks levels + UI.
  */
-const CLASSIC_UPGRADES: UpgradeDef[] = [
+const FRUIT_UPGRADES: UpgradeDef[] = [
   {
     id: 'extraReel',
     name: 'Fourth Wheel',
@@ -58,7 +58,7 @@ function resolveConfig(levels: Record<string, number>): ResolvedMachineConfig {
 
   return {
     topology,
-    symbols: CLASSIC_SYMBOLS,
+    symbols: FRUIT_SYMBOLS,
     wild: {
       glyph: '🃏',
       color: '#d4a04a',
@@ -69,11 +69,22 @@ function resolveConfig(levels: Record<string, number>): ResolvedMachineConfig {
   };
 }
 
-export const classic3x3: Machine = {
-  id: 'classic-3x3',
+/**
+ * "Fruit machine" — the classic payline slot, UK-slang-named. Ships
+ * at 3×3 but grows to 5×4 via topology upgrades (currently gated
+ * behind prestige, see DESIGN_NOTES). Symbol pool leans fruit-heavy
+ * at the low tiers (cherry/lemon/plum) with classic bell/star/diamond/7
+ * at the higher tiers, keeping the vibe nostalgic.
+ *
+ * The player-facing brand is "Lucky Parlour" — the name of this
+ * specific parlour, not the machine type. Future machines will have
+ * different names and might reuse parts of this one's structure.
+ */
+export const fruitMachine: Machine = {
+  id: 'fruit-machine',
   name: 'Lucky Parlour',
   resolveConfig,
   evaluate,
   highlightsForWin,
-  upgrades: CLASSIC_UPGRADES,
+  upgrades: FRUIT_UPGRADES,
 };

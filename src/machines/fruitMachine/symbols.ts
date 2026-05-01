@@ -14,7 +14,7 @@ import { SlotSymbol } from '../../engine/types';
  * bumped most (2.3-2.6×) so the constant stream of small wins feels
  * rewarding; jackpots still keep their "oh shit" punch.
  */
-export const CLASSIC_SYMBOLS: SlotSymbol[] = [
+export const FRUIT_SYMBOLS: SlotSymbol[] = [
   { id: 'cherry',   glyph: '🍒', name: 'Cherry',   color: '#d23b4f', weight: 40, payouts: { 3: 7,   4: 20,   5: 50 } },
   { id: 'lemon',    glyph: '🍋', name: 'Lemon',    color: '#e8c547', weight: 35, payouts: { 3: 10,  4: 30,   5: 75 } },
   { id: 'plum',     glyph: '🍇', name: 'Plum',     color: '#8b5a9e', weight: 28, payouts: { 3: 18,  4: 50,   5: 125 } },
