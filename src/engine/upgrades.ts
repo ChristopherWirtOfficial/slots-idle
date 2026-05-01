@@ -17,8 +17,16 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
     id: 'bet',
     name: 'Table Stakes',
     blurb: 'Raise your wager. Every 3rd level bumps the increment.',
-    baseCost: 35,
-    costMult: 1.5,
+    // Cost curve retuned: previous 35 × 1.5^L meant L1 was affordable
+    // in ~45s and every subsequent level scaled slower than the income
+    // that level granted — making bet a "press whenever you can" dump
+    // with no decision. Current 75 × 1.85 keeps the opener accessible
+    // and scales gently:
+    //   L1=75, L2=138, L4=474, L6=1625, L8=5562.
+    // Pairs with the step-every-3 effect: later levels are more
+    // powerful per level, so they SHOULD cost disproportionately more.
+    baseCost: 75,
+    costMult: 1.85,
     maxLevel: 8,
     // Step-every-3: +1,+1,+1,+2,+2,+2,+3,+3 (sum 15 over 8 levels; bet = 1+sum)
     effect: (lvl) => {
@@ -46,21 +54,27 @@ export const GLOBAL_UPGRADES: UpgradeDef[] = [
     id: 'wildChance',
     name: 'Wild Card',
     blurb: 'A mystery card substitutes for anything on a payline.',
-    baseCost: 400,
-    costMult: 2.0,
+    // Retuned: previous weight 2 × 1.5^(L-1) reached ~44% per-cell at
+    // L10 which was overpowering — nearly every payline hit on nearly
+    // every spin, removing the thrill of a wild reveal. Also too
+    // cheap (base 400 × 2.0^L) for how game-warping it was.
+    //
+    // New curve 1.5 × 1.4^(L-1) tops out at ~24% per-cell; still
+    // transformative at max level but not dominant. L1≈1.5%, L5≈5.4%,
+    // L10≈23.6%. Base 600, mult 2.4 → L10 ≈ 1.6M chips, a proper
+    // late-game commitment.
+    baseCost: 600,
+    costMult: 2.4,
     maxLevel: 10,
     // Effect = per-cell probability a cell is rolled as a wild, 0..1.
-    // Curve: 2 * 1.5^(L-1) weight, normalized to weight/(weight+100).
-    // Produces a tease at L1 (~2%), crossover at L5 (~9%), dominant
-    // at L10 (~44%). See conversation 2026-04-17 for the math.
     effect: (lvl) => {
       if (lvl === 0) return 0;
-      const w = 2 * Math.pow(1.5, lvl - 1);
+      const w = 1.5 * Math.pow(1.4, lvl - 1);
       return w / (w + 100);
     },
     format: (lvl) => {
       if (lvl === 0) return 'Unlock at Lv 1';
-      const w = 2 * Math.pow(1.5, lvl - 1);
+      const w = 1.5 * Math.pow(1.4, lvl - 1);
       return `~${((w / (w + 100)) * 100).toFixed(1)}% per cell`;
     },
   },
