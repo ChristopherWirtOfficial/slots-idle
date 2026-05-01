@@ -1,7 +1,9 @@
 /** @jsxImportSource @emotion/react */
 import { css, keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
+import { useAtomValue } from 'jotai';
 import { ReactNode } from 'react';
+import { jackpotShakingAtom } from '../../state/winDisplay';
 import { theme } from '../../theme';
 
 const shake = keyframes`
@@ -27,12 +29,13 @@ const Shell = styled.section<{ shaking: boolean }>`
   ${(p) => p.shaking && css`animation: ${shake} 0.7s ease-out;`}
 `;
 
-interface MachineCabinetProps {
-  shaking: boolean;
-  children: ReactNode;
-}
-
-/** The outer cabinet. Shakes briefly on jackpot. */
-export function MachineCabinet({ shaking, children }: MachineCabinetProps) {
+/**
+ * The outer cabinet. Shakes briefly on a jackpot-producing commit.
+ * Shake duration is a pure derivation of effectiveNow vs the commit
+ * timestamp (see jackpotShakingAtom) — the component reads the atom
+ * and renders accordingly; no local lifecycle, no setTimeout.
+ */
+export function MachineCabinet({ children }: { children: ReactNode }) {
+  const shaking = useAtomValue(jackpotShakingAtom);
   return <Shell shaking={shaking}>{children}</Shell>;
 }

@@ -246,6 +246,7 @@ export const animationTickAtom = atom(null, (get, set) => {
       id: spins,
       amount: commitPending.totalPayout,
       isJackpot: commitPending.hasJackpot,
+      createdAt: t,
     });
   }
   if (commitPending.hasJackpot) set(jackpotsAtom, get(jackpotsAtom) + 1);

@@ -2,9 +2,8 @@
 import { keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useAtomValue } from 'jotai';
-import { useEffect, useRef, useState } from 'react';
-import { symbolsAtom } from '../../state/machine';
 import { wildRerollAtom } from '../../state/session';
+import { wildRerollDisplayAtom } from '../../state/winDisplay';
 import { theme } from '../../theme';
 
 const Overlay = styled.div`
@@ -80,68 +79,28 @@ const Sub = styled.div<{ visible: boolean }>`
 `;
 
 /**
- * Popup shown when a spin produces one or more all-wild paylines. A
- * mini roulette cycles through the symbol pool before landing on the
- * pre-rolled reveal symbol. The reveal symbol is used to pay the
- * wild-only line(s) — controlled upstream in animationTickAtom.
+ * Popup shown during the wild-reroll mini-animation. Its displayed
+ * symbol is a pure derivation of effectiveNow + wildReroll.startedAt
+ * (see wildRerollDisplayAtom) — the component just renders whatever
+ * the derivation says should be on screen right now.
  *
- * Rendered by MachineCabinet so it overlays the reels.
+ * No setTimeout loop, no tick state, no ref bookkeeping. As effective
+ * time advances, the atom recomputes and the component re-renders
+ * with a new symbol. Fast-forwards naturally during offline catch-up.
  */
 export function WildRerollPopup() {
   const reroll = useAtomValue(wildRerollAtom);
-  const symbols = useAtomValue(symbolsAtom);
-
-  // Track "cycle" phase via a throbbing index that moves through the
-  // symbol pool. We stop cycling at ~85% of the duration, leaving a
-  // short window for the landing to settle visually.
-  const [tickIdx, setTickIdx] = useState(0);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (reroll === null) return;
-    const start = reroll.startedAt;
-    const cycleEndsAt = start + reroll.durationMs * 0.85;
-
-    // Cycle speeds up then slows down. Use distance from midpoint for
-    // a rough ease feel. Interval in ms per symbol step.
-    const tick = () => {
-      const now = performance.now();
-      if (now >= cycleEndsAt) {
-        rafRef.current = null;
-        return;
-      }
-      const elapsed = now - start;
-      const progress = elapsed / reroll.durationMs;
-      // Frame-rate-dependent increment: ~2ms at start (fast), ~9ms
-      // near end (slow). Bias so early frames are the blur and late
-      // frames settle toward the reveal.
-      const stepMs = 20 + progress * 80;
-      setTickIdx((i) => i + 1);
-      rafRef.current = window.setTimeout(tick, stepMs) as unknown as number;
-    };
-
-    rafRef.current = window.setTimeout(tick, 20) as unknown as number;
-    return () => {
-      if (rafRef.current !== null) window.clearTimeout(rafRef.current);
-    };
-  }, [reroll]);
-
-  if (reroll === null) return null;
-
-  const elapsed = performance.now() - reroll.startedAt;
-  const landed = elapsed >= reroll.durationMs * 0.85;
-  const displaySymbol = landed
-    ? reroll.revealSymbol
-    : symbols[tickIdx % symbols.length] ?? reroll.revealSymbol;
+  const display = useAtomValue(wildRerollDisplayAtom);
+  if (reroll === null || display === null) return null;
 
   return (
     <Overlay>
       <Card>
         <Label>Wild Line</Label>
-        <GlyphBox color={displaySymbol.color} landed={landed}>
-          {displaySymbol.glyph}
+        <GlyphBox color={display.symbol.color} landed={display.landed}>
+          {display.symbol.glyph}
         </GlyphBox>
-        <Sub visible={landed}>{reroll.revealSymbol.name}</Sub>
+        <Sub visible={display.landed}>{reroll.revealSymbol.name}</Sub>
       </Card>
     </Overlay>
   );

@@ -21,6 +21,9 @@ export interface FloatEvent {
   id: number;
   amount: Decimal;
   isJackpot: boolean;
+  /** When the float was committed. The toast's visibility is a
+   *  pure derivation of effectiveNow - createdAt vs its duration. */
+  createdAt: number;
 }
 export const lastFloatAtom = atom<FloatEvent | null>(null);
 

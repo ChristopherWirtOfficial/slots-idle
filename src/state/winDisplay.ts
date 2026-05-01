@@ -1,7 +1,9 @@
 import { atom } from 'jotai';
 import { autospinDelayMsAtom, autospinEffectiveAtom } from './autospin';
 import { effectiveNowAtom } from './clock';
-import { lastCommitAtom } from './session';
+import { SlotSymbol } from '../engine/types';
+import { symbolsAtom } from './machine';
+import { FloatEvent, lastCommitAtom, lastFloatAtom, wildRerollAtom } from './session';
 
 /** Natural per-win display duration at slow/manual pace. */
 export const NATURAL_DISPLAY_MS = 1400;
@@ -167,4 +169,70 @@ export const captionIdxAtom = atom<number | null>((get) => {
     if (elapsed >= slot.startMs) picked = slot.winIdx;
   }
   return picked;
+});
+
+/* ──────────────────────────────────────────────────────────────
+ * Timestamp-driven display derivations.
+ *
+ * Each of the below is a pure function of (fact-with-timestamp,
+ * effectiveNow): shaking/visible/symbol is "true iff elapsed since
+ * the event < duration." Consumers read a derived atom; when virtual
+ * time fast-forwards (offline catch-up), the derivation fast-forwards
+ * with it automatically — no imperative cleanup, no animation refs.
+ * ────────────────────────────────────────────────────────────── */
+
+const JACKPOT_SHAKE_MS = 700;
+const FLOAT_TOAST_MS = 1400;
+
+/** Is the cabinet currently doing its jackpot-celebration shake? */
+export const jackpotShakingAtom = atom<boolean>((get) => {
+  const commit = get(lastCommitAtom);
+  if (commit === null) return false;
+  if (!commit.result.hasJackpot) return false;
+  const elapsed = get(effectiveNowAtom) - commit.committedAt;
+  return elapsed >= 0 && elapsed < JACKPOT_SHAKE_MS;
+});
+
+/**
+ * The float toast currently on screen, or null if none should show.
+ * Visible for FLOAT_TOAST_MS after the float's createdAt.
+ */
+export const visibleFloatAtom = atom<FloatEvent | null>((get) => {
+  const f = get(lastFloatAtom);
+  if (f === null) return null;
+  const elapsed = get(effectiveNowAtom) - f.createdAt;
+  if (elapsed < 0 || elapsed >= FLOAT_TOAST_MS) return null;
+  return f;
+});
+
+export interface WildRerollDisplay {
+  symbol: SlotSymbol;
+  landed: boolean;
+}
+
+/**
+ * What the wild-reroll popup should display right now: a cycling
+ * symbol from the pool during the early 85% of the animation, then
+ * the revealed symbol for the final 15%.
+ *
+ * Cycle count is the analytic integral of the original imperative
+ * rate function (stepMs(t) = 20 + 80·t/D), giving an identical feel
+ * without the setTimeout loop and accumulated state. The integral
+ * evaluates to (D/80)·ln(1 + 4t/D), which is monotonic and smooth.
+ */
+export const wildRerollDisplayAtom = atom<WildRerollDisplay | null>((get) => {
+  const reroll = get(wildRerollAtom);
+  if (reroll === null) return null;
+  const elapsed = get(effectiveNowAtom) - reroll.startedAt;
+  const landed = elapsed >= reroll.durationMs * 0.85;
+  if (landed) return { symbol: reroll.revealSymbol, landed: true };
+  const symbols = get(symbolsAtom);
+  if (symbols.length === 0) {
+    return { symbol: reroll.revealSymbol, landed: false };
+  }
+  const cycles = elapsed > 0
+    ? (reroll.durationMs / 80) * Math.log(1 + (4 * elapsed) / reroll.durationMs)
+    : 0;
+  const idx = Math.floor(cycles) % symbols.length;
+  return { symbol: symbols[idx], landed: false };
 });
