@@ -79,6 +79,25 @@ function tierFor(win: MachineWin, bet: number): Tier {
   return 'small';
 }
 
+/**
+ * Horizontal offset (% of grid width) for a payline's float toast,
+ * so multiple wins don't pile up at the same x coordinate.
+ *
+ * Every payline on a 3-reel machine has the same geometric centroid
+ * x (50%), so centroid alone doesn't separate them horizontally. We
+ * slot each payline into a fixed position based on its index in the
+ * config's ordered payline list — deterministic, consistent across
+ * spins (the same line always lives in the same spot), and scales to
+ * any payline count. Spread covers ±SPREAD/2 of the grid centered at
+ * the centroid.
+ */
+const STAGGER_SPREAD_PCT = 44;
+function horizontalOffsetPct(paylineIdx: number, paylineCount: number): number {
+  if (paylineCount <= 1 || paylineIdx < 0) return 0;
+  const step = STAGGER_SPREAD_PCT / (paylineCount - 1);
+  return (paylineIdx - (paylineCount - 1) / 2) * step;
+}
+
 interface LineFloatsProps {
   centers: CellCenters;
   bet: number;
@@ -116,8 +135,18 @@ export function LineFloats({ centers, bet }: LineFloatsProps) {
             ? `${glyph} +${formatNum(win.payout)} ${glyph}`
             : `${glyph} +${formatNum(win.payout)}`;
 
+        // Stagger horizontally by the payline's index in config.paylines.
+        // Falls back to centered (idx = -1) if the win's meta doesn't
+        // identify a payline — shouldn't happen for the fruit machine but
+        // a future machine might not emit paylineId.
+        const paylineId = (win.meta?.paylineId as string | undefined) ?? null;
+        const paylineIdx = paylineId
+          ? config.paylines.findIndex((p) => p.id === paylineId)
+          : -1;
+        const offsetPct = horizontalOffsetPct(paylineIdx, config.paylines.length);
+
         const style: CSSProperties = {
-          left: `${anchor.x}%`,
+          left: `calc(${anchor.x}% + ${offsetPct}%)`,
           top: `calc(${anchor.y}% - ${anim.riseY}px)`,
           opacity: anim.opacity,
           fontSize: FONT_SIZE[tier],
