@@ -77,7 +77,11 @@ export function velocityCellsPerFrame(
 
 /**
  * Build the strip of cells a reel will scroll through.
- * Strip layout: [...prevWindow, ...random fill, ...resultWindow].
+ * Strip layout (top → bottom): [...resultWindow, ...random fill, ...prevWindow].
+ * The strip is positioned with prevWindow initially in the viewport and
+ * translates downward over the spin, so symbols flow top→bottom like a
+ * physical reel rotating toward the viewer.
+ *
  * Window length comes from the caller (= machine.rowCount), so this
  * works for any vertical reel size.
  *
@@ -93,10 +97,10 @@ export function buildStrip(
   rng: () => number = Math.random,
 ): Cell[] {
   const rowCount = prevWindow.length;
-  const strip: Cell[] = [...prevWindow];
+  const strip: Cell[] = [...resultWindow];
   for (let i = rowCount; i < distanceCells; i++) {
     strip.push(symbolCell(rollSymbol(symbols, 0, rng)));
   }
-  strip.push(...resultWindow);
+  strip.push(...prevWindow);
   return strip;
 }

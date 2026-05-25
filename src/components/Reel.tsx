@@ -45,7 +45,9 @@ const Strip = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  transform: translateY(calc(var(--cells-scrolled, 0) * var(--cell-h) * -1));
+  transform: translateY(
+    calc((var(--cells-scrolled, 0) - var(--distance-cells, 0)) * var(--cell-h))
+  );
   will-change: transform;
 `;
 
@@ -105,6 +107,7 @@ function SpinningReel({
     <Strip
       style={{
         ['--cells-scrolled' as string]: cellsScrolled,
+        ['--distance-cells' as string]: state.distanceCells,
         filter: blurPx > 0.1 ? `blur(${blurPx.toFixed(2)}px)` : 'none',
       } as CSSProperties}
     >
