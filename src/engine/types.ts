@@ -108,6 +108,33 @@ export interface UpgradeDef {
 }
 
 /**
+ * A prestige-store track. Bought with High-Roller Points (not chips).
+ * Two kinds:
+ *  - 'reduction' — permanently divides a base upgrade's chip cost by
+ *    (1 + level·scalar). `target` is the upgrade id it discounts.
+ *  - 'payout' — a permanent global payout multiplier (the old flat
+ *    prestige multiplier, now spend-driven).
+ *
+ * `maxLevel` of 0 means uncapped — the build is cap-agnostic so we can
+ * decide caps later (see DESIGN_NOTES open question on caps).
+ */
+export interface StoreTrackDef {
+  id: string;
+  name: string;
+  blurb: string;
+  pointCostBase: number;
+  pointCostMult: number;
+  maxLevel: number;
+  kind: 'reduction' | 'payout';
+  /** For 'reduction': the upgrade id whose chip cost this discounts. */
+  target?: string;
+  /** Per-level scalar: reduction k, or payout per-level boost. */
+  scalar: number;
+  /** Human-readable current effect for the UI. */
+  format: (level: number) => string;
+}
+
+/**
  * Config for wild cells — a symbol-agnostic substitute that matches
  * anything on a payline. Always present in a resolved config; at
  * level 0 the `chance` is 0 and nothing happens. The declarative

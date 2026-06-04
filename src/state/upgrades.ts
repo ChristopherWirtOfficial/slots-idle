@@ -4,15 +4,22 @@ import { atomWithStorage } from 'jotai/utils';
 import { GLOBAL_UPGRADES, costOf } from '../engine/upgrades';
 import { levelsAtom } from './levels';
 import { allUpgradesAtom } from './machine';
+import { reductionFactorsAtom } from './store';
 import { cheatLuckAtom } from './cheats';
 
-/** Cost of the next level purchase per upgrade id (engine + machine). */
+/**
+ * Cost of the next level purchase per upgrade id (engine + machine),
+ * after applying any prestige-store cost reduction. The reduction factor
+ * is 1 (no-op) until the player buys reduction-track levels.
+ */
 export const costsAtom = atom((get) => {
   const upgrades = get(allUpgradesAtom);
   const levels = get(levelsAtom);
+  const factors = get(reductionFactorsAtom);
   const result: Record<string, Decimal> = {};
   for (const u of upgrades) {
-    result[u.id] = costOf(u, levels[u.id] ?? 0);
+    const base = costOf(u, levels[u.id] ?? 0);
+    result[u.id] = base.mul(factors[u.id] ?? 1).ceil();
   }
   return result;
 });

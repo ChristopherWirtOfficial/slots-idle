@@ -1,5 +1,5 @@
 import Decimal from 'break_infinity.js';
-import { UpgradeDef } from './types';
+import { StoreTrackDef, UpgradeDef } from './types';
 
 /**
  * Engine-level (global) upgrades. Machines contribute their own via
@@ -138,17 +138,82 @@ export function costOf(u: UpgradeDef, currentLevel: number): Decimal {
   return Decimal.mul(u.baseCost, Decimal.pow(u.costMult, currentLevel)).ceil();
 }
 
+// ─── Prestige points ──────────────────────────────────────────────────
+// points = floor((lifetime / K) ^ exp). exp=1.0 is linear (pinned start);
+// 1.05–1.1 later to reward plateau-pushing. K sets the points/prestige
+// scale: with K=1000 a ~1M-lifetime cliff run yields ~1000 points.
+// TUNABLE — proper calibration needs a prestige-loop sim (follow-up).
+export const PRESTIGE_K = 1000;
+export const PRESTIGE_EXP = 1.0;
+
+// First prestige is gated to grant at least this many points — enough to
+// actually afford a store purchase, so a new player is never tempted into
+// a worthless 1-point cash-out. At K=1000 this lands the first prestige
+// near the design's ~45-min cliff (≈50K lifetime). TUNABLE.
+export const PRESTIGE_MIN_GAIN = 50;
+
 /**
  * HRP granted at prestige time. Decimal because lifetimeWinnings grows
- * unbounded, so sqrt(lifetimeWinnings / 10000) can go well past number range.
- * Floor'd to the nearest whole HRP.
+ * unbounded. Returns 0 (prestige disallowed) until the gain clears the
+ * minimum — see PRESTIGE_MIN_GAIN.
  */
 export function prestigeGain(lifetimeWinnings: Decimal): Decimal {
-  if (lifetimeWinnings.lt(10000)) return new Decimal(0);
-  return lifetimeWinnings.div(10000).sqrt().floor();
+  if (lifetimeWinnings.lt(PRESTIGE_K)) return new Decimal(0);
+  const gain = lifetimeWinnings.div(PRESTIGE_K).pow(PRESTIGE_EXP).floor();
+  return gain.lt(PRESTIGE_MIN_GAIN) ? new Decimal(0) : gain;
 }
 
-/** Permanent payout multiplier derived from HRP. Each point is +25%. */
-export function prestigeMultiplier(points: Decimal): Decimal {
-  return points.mul(0.25).add(1);
+// ─── Prestige store ───────────────────────────────────────────────────
+// Two competing point sinks: per-upgrade cost-reduction tracks and one
+// global payout-boost track (House Favor — absorbs the old flat prestige
+// multiplier). All TUNABLE; point-cost balance pending the loop sim.
+export const REDUCTION_SCALAR = 0.15;    // k in 1/(1 + level·k)
+export const REDUCTION_POINT_BASE = 50;
+export const REDUCTION_POINT_MULT = 1.6;
+export const PAYOUT_SCALAR = 0.25;       // +25% payouts per level
+export const PAYOUT_POINT_BASE = 100;
+export const PAYOUT_POINT_MULT = 1.5;
+
+/** Chip-cost reduction factor for an upgrade given its track level. */
+export function reductionFactor(level: number, scalar = REDUCTION_SCALAR): number {
+  return 1 / (1 + level * scalar);
 }
+
+/** Permanent payout multiplier from the House Favor store track. */
+export function payoutTrackMult(level: number): Decimal {
+  return new Decimal(1 + level * PAYOUT_SCALAR);
+}
+
+/** Point cost of the NEXT level of a store track (level = current). */
+export function trackPointCost(track: StoreTrackDef, level: number): Decimal {
+  return Decimal.mul(track.pointCostBase, Decimal.pow(track.pointCostMult, level)).ceil();
+}
+
+/** Build the cost-reduction track for a given base upgrade. */
+export function reductionTrackFor(u: UpgradeDef): StoreTrackDef {
+  return {
+    id: `reduce:${u.id}`,
+    name: u.name,
+    blurb: `Permanently discount the chip cost of ${u.name}.`,
+    pointCostBase: REDUCTION_POINT_BASE,
+    pointCostMult: REDUCTION_POINT_MULT,
+    maxLevel: 0,
+    kind: 'reduction',
+    target: u.id,
+    scalar: REDUCTION_SCALAR,
+    format: (lvl) => `−${Math.round((1 - reductionFactor(lvl)) * 100)}% cost`,
+  };
+}
+
+/** The global payout-boost track (absorbs the old flat prestige multiplier). */
+export const PAYOUT_TRACK: StoreTrackDef = {
+  id: 'payout',
+  name: 'House Favor',
+  blurb: 'A permanent boost to every payout. Stacks atop your upgrades.',
+  pointCostBase: PAYOUT_POINT_BASE,
+  pointCostMult: PAYOUT_POINT_MULT,
+  maxLevel: 0,
+  kind: 'payout',
+  scalar: PAYOUT_SCALAR,
+  format: (lvl) => `×${(1 + lvl * PAYOUT_SCALAR).toFixed(2)} payouts`,
+};

@@ -1,10 +1,9 @@
 import { atom } from 'jotai';
-import { costOf } from '../../engine/upgrades';
 import { sfxUpgrade } from '../../audio/sfx';
 import { chipsAtom } from '../economy';
 import { levelsAtom } from '../levels';
 import { allUpgradesAtom } from '../machine';
-import { currentBetAtom, maxBetAtom, setCurrentBetAtom } from '../upgrades';
+import { costsAtom, currentBetAtom, maxBetAtom, setCurrentBetAtom } from '../upgrades';
 
 /** Buy a level of any upgrade (engine global or machine contribution). */
 export const buyUpgradeAtom = atom(null, (get, set, id: string) => {
@@ -16,9 +15,10 @@ export const buyUpgradeAtom = atom(null, (get, set, id: string) => {
   const lvl = levels[id] ?? 0;
   if (lvl >= u.maxLevel) return;
 
-  const cost = costOf(u, lvl);
+  // Read the store-discounted cost so chips deducted always match the UI.
+  const cost = get(costsAtom)[id];
   const chips = get(chipsAtom);
-  if (chips.lt(cost)) return;
+  if (!cost || chips.lt(cost)) return;
 
   // Snapshot "was the player wagering at max?" BEFORE bumping the level.
   // If they were, we'll slide their wager up to the new max so the

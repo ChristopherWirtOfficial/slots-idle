@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Lucky Idle Slots — Prestige Plan</title>
+<style>
+  :root {
+    --bg: #0e1410;
+    --bg2: #141c16;
+    --panel: #18241b;
+    --panel2: #1e2d22;
+    --ink: #ece3cf;
+    --ink-dim: #b6ad96;
+    --ink-faint: #8a8470;
+    --gold: #d7b15a;
+    --gold-bright: #f0cd78;
+    --green: #5fa86b;
+    --red: #c4593f;
+    --line: #2c3a2c;
+    --radius: 14px;
+    --shadow: 0 8px 28px rgba(0,0,0,.45);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1c2a1f 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 0 0 64px;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 18px; }
+
+  /* ---- Header ---- */
+  header {
+    text-align: center;
+    padding: 40px 18px 26px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .eyebrow {
+    letter-spacing: .35em;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: var(--gold);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 9vw, 46px);
+    line-height: 1.05;
+    margin: 0;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 0 rgba(0,0,0,.4);
+  }
+  .sub { color: var(--ink-dim); font-size: 14px; margin-top: 12px; }
+  .deco {
+    width: 120px; height: 2px; margin: 18px auto 0;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  /* ---- Sections ---- */
+  section { padding: 30px 0 8px; }
+  h2 {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    color: var(--gold-bright);
+    margin: 0 0 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .n {
+    font-size: 13px; font-family: -apple-system, sans-serif;
+    color: var(--bg); background: var(--gold);
+    width: 26px; height: 26px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; font-weight: 700;
+  }
+  h2 .tag {
+    margin-left: auto; font-size: 10px; font-family: -apple-system, sans-serif;
+    letter-spacing: .12em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 20px; font-weight: 600;
+  }
+  .tag.pinned { background: rgba(95,168,107,.16); color: var(--green); border: 1px solid rgba(95,168,107,.35); }
+  .tag.open   { background: rgba(196,89,63,.14); color: var(--red); border: 1px solid rgba(196,89,63,.35); }
+  .lead { color: var(--ink-dim); margin: 6px 0 16px; }
+
+  p { margin: 0 0 14px; }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: .88em; background: rgba(255,255,255,.06);
+    padding: 2px 6px; border-radius: 6px; color: var(--gold-bright);
+  }
+
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin: 0 0 16px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16px; color: var(--gold); }
+  .card p:last-child { margin-bottom: 0; }
+
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin: 0 0 8px; }
+  li::marker { color: var(--gold); }
+
+  /* before/after */
+  .ba { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .ba .col { border-radius: var(--radius); padding: 16px; border: 1px solid var(--line); }
+  .ba .before { background: rgba(196,89,63,.07); border-color: rgba(196,89,63,.25); }
+  .ba .after  { background: rgba(95,168,107,.07); border-color: rgba(95,168,107,.3); }
+  .ba h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .ba .before h4 { color: var(--red); }
+  .ba .after h4 { color: var(--green); }
+  .ba p { font-size: 14px; color: var(--ink-dim); margin: 0; }
+
+  /* interactive */
+  .lab {
+    background: #0c120d;
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin: 16px 0;
+    box-shadow: 0 0 0 1px rgba(215,177,90,.12), var(--shadow);
+  }
+  .lab .lab-h {
+    font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--gold); margin: 0 0 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .lab .lab-h::before { content: "▰▰"; letter-spacing: -2px; color: var(--gold); opacity:.6; }
+  .ctrl { margin: 0 0 16px; }
+  .ctrl:last-of-type { margin-bottom: 0; }
+  .ctrl label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 13px; color: var(--ink-dim); margin-bottom: 8px;
+  }
+  .ctrl label b { color: var(--gold-bright); font-variant-numeric: tabular-nums; font-size: 15px; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--gold) var(--fill,50%), #2c3a2c var(--fill,50%));
+    outline: none; margin: 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--gold-bright), var(--gold) 60%, #9a7c34);
+    border: 2px solid #0c120d; box-shadow: 0 2px 6px rgba(0,0,0,.5); cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid #0c120d;
+    background: var(--gold); cursor: pointer;
+  }
+  .readout {
+    margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .readout .cell {
+    background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px;
+    text-align: center;
+  }
+  .readout .cell .k { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+  .readout .cell .v { font-size: 24px; font-weight: 700; color: var(--gold-bright); font-variant-numeric: tabular-nums; margin-top: 4px; font-family: Georgia, serif; }
+  .readout .cell .u { font-size: 11px; color: var(--ink-faint); }
+  .note { font-size: 12px; color: var(--ink-faint); margin-top: 12px; font-style: italic; }
+
+  /* bars for cost reduction */
+  .bars { display: flex; flex-direction: column; gap: 9px; margin-top: 16px; }
+  .bar-row { display: grid; grid-template-columns: 54px 1fr 64px; align-items: center; gap: 10px; font-size: 13px; }
+  .bar-row .lbl { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .track { height: 22px; background: rgba(255,255,255,.05); border-radius: 6px; overflow: hidden; }
+  .fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius: 6px; transition: width .15s ease; }
+  .bar-row .amt { text-align: right; color: var(--gold-bright); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* phasing */
+  .phase { position: relative; padding-left: 26px; margin-bottom: 16px; }
+  .phase::before {
+    content: ""; position: absolute; left: 7px; top: 22px; bottom: -16px; width: 2px; background: var(--line);
+  }
+  .phase:last-child::before { display: none; }
+  .phase .dot {
+    position: absolute; left: 0; top: 4px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--gold); box-shadow: 0 0 0 4px rgba(215,177,90,.15);
+  }
+  .phase h3 { margin: 0 0 6px; color: var(--gold-bright); font-size: 16px; }
+  .phase .files { font-size: 12px; color: var(--ink-faint); font-family: "SF Mono", ui-monospace, monospace; margin-top: 6px; }
+
+  footer { text-align: center; color: var(--ink-faint); font-size: 12px; padding: 36px 18px 0; border-top: 1px solid var(--line); margin-top: 30px; }
+
+  @media (min-width: 560px) { .ba { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">Lucky Idle Slots · Design Doc</p>
+  <h1>The Prestige Plan</h1>
+  <p class="sub">Replacing the flat multiplier with a points economy,<br/>a cost-reduction store, milestones &amp; cards.</p>
+  <div class="deco"></div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2>The Shift</h2>
+    <p class="lead">Today, prestige does exactly one thing: a permanent payout multiplier. The plan turns it into a multi-track permanent-progression layer — the real heart of the idle loop.</p>
+    <div class="ba">
+      <div class="col before">
+        <h4>Today</h4>
+        <p>Cash out → earn <b>High-Roller Points</b> = <code>floor(√(lifetime / 10000))</code>. Points feed a single flat boost: <code>×(1 + 0.25·HRP)</code>. That's the whole system. No decisions inside it.</p>
+      </div>
+      <div class="col after">
+        <h4>The plan</h4>
+        <p>Points feed <b>two competing sinks</b> — a cost-reduction store and card packs — plus count-gated milestones. "What am I doing this prestige?" becomes a real choice.</p>
+      </div>
+    </div>
+    <p class="note" style="font-style:italic;color:var(--ink-faint)">Flagged for removal alongside this: the <code>totalEverWon</code> atom, which only existed to feed the old multiplier.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">1</span> Points currency <span class="tag pinned">Pinned</span></h2>
+    <p class="lead">The formula is generalized from today's square root into a tunable power curve.</p>
+    <div class="card">
+      <p><code>points = floor((lifetimeChips / K) ^ exp)</code></p>
+      <p style="margin-bottom:0"><code>exp</code> starts at <b>1.0</b> (linear). Push it to <b>1.05–1.1</b> later to reward plateau-pushing. Deliberately ship it <em>undertuned</em> — buffing is easier than nerfing.</p>
+    </div>
+
+    <div class="lab">
+      <p class="lab-h">Points Calculator</p>
+      <div class="ctrl">
+        <label>Lifetime chips this run <b id="lcVal">1.0M</b></label>
+        <input id="lc" type="range" min="4" max="9" step="0.05" value="6" />
+      </div>
+      <div class="ctrl">
+        <label>K (divisor) <b id="kVal">10,000</b></label>
+        <input id="k" type="range" min="3" max="6" step="1" value="4" />
+      </div>
+      <div class="ctrl">
+        <label>exp (curve) <b id="eVal">1.00</b></label>
+        <input id="e" type="range" min="0.5" max="1.15" step="0.01" value="1.0" />
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">Points earned</div><div class="v" id="pts">100</div></div>
+        <div class="cell"><div class="k">vs. today (√)</div><div class="v" id="ptsOld">10</div><div class="u">exp 0.5 baseline</div></div>
+      </div>
+      <p class="note">exp 0.5 reproduces today's behaviour exactly — the new shape is a superset.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span> Shared-spend tension <span class="tag pinned">Pinned</span></h2>
+    <p class="lead">Points are spent on a <b>store</b> AND on <b>card packs</b> from one pool. They compete. That competition is the main strategic decision the whole layer creates — it's the point, not a side effect.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span> The store: cost-reduction tracks <span class="tag pinned">Pinned</span></h2>
+    <p class="lead">One track per upgrade. Each level cuts that upgrade's chip cost by a slice.</p>
+    <div class="card">
+      <p><code>effectiveCost = baseCost / (1 + r · k)</code></p>
+      <p style="margin-bottom:0"><b>r</b> = track level · <b>k</b> = per-upgrade scalar. Divisor math is deliberate: it never hits zero, so everything stays buyable. UI shows it as a percent ("−45% bet cost").</p>
+    </div>
+    <p>Double duty: <b>(a)</b> accelerate the next run back to where you were, and <b>(b)</b> let you push deeper into the exponential cost curve than an un-prestiged player ever could.</p>
+
+    <div class="lab">
+      <p class="lab-h">Cost-Reduction Visualizer</p>
+      <div class="ctrl">
+        <label>Track level r <b id="rVal">3</b></label>
+        <input id="r" type="range" min="0" max="20" step="1" value="3" />
+      </div>
+      <div class="ctrl">
+        <label>Scalar k <b id="kkVal">0.15</b></label>
+        <input id="kk" type="range" min="0.05" max="0.5" step="0.01" value="0.15" />
+      </div>
+      <div class="readout" style="grid-template-columns:1fr">
+        <div class="cell"><div class="k">Cost reduction</div><div class="v" id="redu">31%</div><div class="u" id="reduSub">×0.69 of base cost</div></div>
+      </div>
+      <div class="bars" id="bars"></div>
+      <p class="note">Bars: a 1,000-chip base upgrade at increasing track levels.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span> Milestones <span class="tag pinned">Pinned</span></h2>
+    <p class="lead">Unlocks gated on prestige <b>count</b>, not on spend. Permanent versions of things already in the base game.</p>
+    <ul>
+      <li>Permanent autospin (some tier)</li>
+      <li>First <code>extraReel</code> / <code>extraRow</code></li>
+      <li>Possibly: a new symbol, a new payline tier</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span> Card packs <span class="tag pinned">Pinned</span></h2>
+    <p class="lead">The deepest permanent layer. Bought with points; competes with the store.</p>
+    <div class="card">
+      <p><b>Paylines-as-cards</b> is the anchoring idea. Cards may also govern symbol payouts, wild probability, and more.</p>
+      <p style="margin-bottom:0">Cards survive <b>even a future meta-prestige</b> ("reset everything but your cards"). They're the bottom of the stack.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The framing that matters</h2>
+    <p>Prestige is explicitly <b>one stepping stone</b>, not the top of the tree. The game expects more reset layers above it — each layer's currency is "the points of the previous layer's runs." Build prestige so it can later become a <em>mid-game</em> layer. Don't architect it as terminal.</p>
+  </section>
+
+  <section>
+    <h2>Still open <span class="tag open">Decide</span></h2>
+    <div class="card">
+      <h3>① Caps philosophy</h3>
+      <p>Stay capped, or go uncapped + rely on the cost curve? Tentative split: numerical upgrades (bet, multi, passive) uncapped &amp; reductions extend them; physical-cap upgrades (autospin delay, tick rate, reel/row) stay capped &amp; prestige raises the ceiling. Might feel muddier — pending playtest.</p>
+    </div>
+    <div class="card">
+      <h3>② Point-to-upgrade ratio</h3>
+      <p>At ~1,000 pts/prestige, does one reduction cost ~50 (many buys, commit to a track) or ~200 (few buys, spread thin)?</p>
+    </div>
+    <div class="card">
+      <h3>③ Card depth &amp; rate</h3>
+      <p>Acquisition rate and mechanics beyond paylines — both unresolved.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Suggested phasing</h2>
+    <p class="lead">Each phase is shippable on its own.</p>
+    <div class="phase">
+      <div class="dot"></div>
+      <h3>Phase 1 — Points + store</h3>
+      <p>Generalize the points formula; build the cost-reduction store and fold <code>r·k</code> into cost math. Replaces the flat multiplier entirely.</p>
+      <p class="files">state/prestige.ts · engine/upgrades.ts (costOf) · state/upgrades.ts (costsAtom) · actions/reset.ts · new store UI</p>
+    </div>
+    <div class="phase">
+      <div class="dot"></div>
+      <h3>Phase 2 — Milestones</h3>
+      <p>Count-gated unlocks: permanent autospin, extraReel/extraRow.</p>
+      <p class="files">new milestone atoms · machine.ts · levels.ts</p>
+    </div>
+    <div class="phase">
+      <div class="dot"></div>
+      <h3>Phase 3 — Cards</h3>
+      <p>Paylines-as-cards, packs, the survive-everything persistence layer.</p>
+      <p class="files">new cards module · machines/fruitMachine/paylines.ts</p>
+    </div>
+  </section>
+
+  <footer>
+    Lucky Idle Slots — prestige design, distilled from DESIGN_NOTES.md<br/>
+    Tap the sliders. Nothing here is saved or sent anywhere.
+  </footer>
+</div>
+
+<script>
+  const fmt = (n) => {
+    if (n < 1000) return Math.round(n).toLocaleString();
+    if (n < 1e6) return (n/1e3).toFixed(n<1e4?1:0) + 'K';
+    if (n < 1e9) return (n/1e6).toFixed(n<1e7?2:1) + 'M';
+    if (n < 1e12) return (n/1e9).toFixed(1) + 'B';
+    return (n/1e12).toFixed(1) + 'T';
+  };
+  const fillBg = (el) => {
+    const min = +el.min, max = +el.max, v = +el.value;
+    el.style.setProperty('--fill', ((v-min)/(max-min)*100) + '%');
+  };
+
+  // ---- Points calculator ----
+  const lc = document.getElementById('lc'),
+        k  = document.getElementById('k'),
+        e  = document.getElementById('e');
+  function points() {
+    const lifetime = Math.pow(10, +lc.value);
+    const K = Math.pow(10, +k.value);
+    const exp = +e.value;
+    document.getElementById('lcVal').textContent = fmt(lifetime);
+    document.getElementById('kVal').textContent = K.toLocaleString();
+    document.getElementById('eVal').textContent = exp.toFixed(2);
+    const p = Math.floor(Math.pow(lifetime / K, exp));
+    const old = Math.floor(Math.pow(lifetime / K, 0.5));
+    document.getElementById('pts').textContent = fmt(Math.max(0, p));
+    document.getElementById('ptsOld').textContent = fmt(Math.max(0, old));
+    [lc,k,e].forEach(fillBg);
+  }
+  [lc,k,e].forEach(el => el.addEventListener('input', points));
+
+  // ---- Cost-reduction visualizer ----
+  const r = document.getElementById('r'), kk = document.getElementById('kk');
+  function reduction() {
+    const rv = +r.value, kv = +kk.value;
+    document.getElementById('rVal').textContent = rv;
+    document.getElementById('kkVal').textContent = kv.toFixed(2);
+    const factor = 1 / (1 + rv * kv);
+    const cut = (1 - factor) * 100;
+    document.getElementById('redu').textContent = cut.toFixed(0) + '%';
+    document.getElementById('reduSub').textContent = '×' + factor.toFixed(2) + ' of base cost';
+    const bars = document.getElementById('bars');
+    const levels = [0, Math.max(1,Math.round(rv/3)), Math.max(2,Math.round(2*rv/3)), rv];
+    const uniq = [...new Set(levels)].sort((a,b)=>a-b);
+    bars.innerHTML = uniq.map(L => {
+      const f = 1 / (1 + L * kv);
+      const cost = 1000 * f;
+      const pct = (1 - f) * 100;
+      return `<div class="bar-row"><span class="lbl">r=${L}</span>`
+        + `<span class="track"><span class="fill" style="width:${Math.max(2,100-pct)}%"></span></span>`
+        + `<span class="amt">${Math.round(cost).toLocaleString()}</span></div>`;
+    }).join('');
+    [r,kk].forEach(fillBg);
+  }
+  [r,kk].forEach(el => el.addEventListener('input', reduction));
+
+  points();
+  reduction();
+</script>
+</body>
+</html>

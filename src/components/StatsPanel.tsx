@@ -2,7 +2,7 @@
 import styled from '@emotion/styled';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { theme } from '../theme';
-import { prestigeMultiplier } from '../engine/upgrades';
+import { PRESTIGE_K, PRESTIGE_MIN_GAIN } from '../engine/upgrades';
 import { formatNum } from '../util/format';
 import {
   jackpotsAtom,
@@ -164,7 +164,6 @@ export function StatsPanel() {
   };
 
   const hrpReady = prestigePending.gt(0);
-  const nextMult = prestigeMultiplier(highRollerPoints.add(prestigePending));
   const chipsPerSec = passiveAmount / (passiveRateMs / 1000);
   return (
     <Panel>
@@ -183,11 +182,11 @@ export function StatsPanel() {
         <PrestigeTitle>High Roller</PrestigeTitle>
         <PrestigeBlurb>
           {highRollerPoints.gt(0) && (
-            <>You hold <b style={{color: theme.color.goldBright}}>{formatNum(highRollerPoints)}</b> HRP — permanent ×{formatNum(prestigeMultiplier(highRollerPoints))} winnings.<br/></>
+            <>You hold <b style={{color: theme.color.goldBright}}>{formatNum(highRollerPoints)}</b> HRP to spend in the store below.<br/></>
           )}
           {hrpReady
-            ? `Cash out now for +${formatNum(prestigePending)} HRP. New total mult: ×${formatNum(nextMult)}.`
-            : 'Win 10,000 chips this run to earn your first HRP.'}
+            ? `Cash out now for +${formatNum(prestigePending)} HRP. This ends the run and resets your chips & upgrades.`
+            : `Win ${formatNum(PRESTIGE_K * PRESTIGE_MIN_GAIN)} chips this run to unlock your first cash-out.`}
         </PrestigeBlurb>
         <PrestigeButton
           disabled={!hrpReady}

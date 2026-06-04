@@ -9,13 +9,18 @@ import {
 } from '../economy';
 import { levelsAtom } from '../levels';
 import { highRollerPointsAtom, prestigePendingAtom } from '../prestige';
+import { storeLevelsAtom } from '../store';
 import { lastCommitAtom, lastFloatAtom, pendingResultAtom } from '../session';
 import { reelAtomsAtom } from '../reels';
 
 const STARTING_CHIPS = () => new Decimal(30);
 const ZERO = () => new Decimal(0);
 
-/** Cash in prestige: gain HRP, wipe run-local state. Reels re-sync. */
+/**
+ * Cash in prestige: gain HRP, wipe run-local state. Permanent layers —
+ * the HRP balance and the prestige store (storeLevelsAtom) — survive.
+ * Reels re-sync.
+ */
 export const prestigeActionAtom = atom(null, (get, set) => {
   const gain = get(prestigePendingAtom);
   if (gain.lte(0)) return;
@@ -41,6 +46,7 @@ export const resetActionAtom = atom(null, (get, set) => {
   set(spinsTotalAtom, 0);
   set(highRollerPointsAtom, ZERO());
   set(levelsAtom, {});
+  set(storeLevelsAtom, {});
   set(lastCommitAtom, null);
   set(lastFloatAtom, null);
   set(pendingResultAtom, null);
