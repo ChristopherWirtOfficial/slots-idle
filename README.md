@@ -20,10 +20,28 @@ npm run build:single   # dist/index.html — one inlined HTML file (overwrites V
 
 ## GitHub Pages
 
-1. Repo **Settings → Pages**: under **Build and deployment**, set **Source** to **GitHub Actions** (not “Deploy from a branch”). If this is still “branch,” deploy will fail with **404** when creating a Pages deployment.
-2. Push to `main` (or re-run the workflow from the **Actions** tab after changing settings).
+The site is served from the **`gh-pages` branch**, which doubles as both the
+live production deploy and a host for per-PR previews. The branch's file tree
+maps directly to URL paths.
 
-The app uses a relative asset base (`./`) so it works at `https://<user>.github.io/<repo>/` without editing the repo name in config.
+1. Repo **Settings → Pages**: under **Build and deployment**, set **Source** to
+   **Deploy from a branch**, branch **`gh-pages`**, folder **`/ (root)`**.
+   (One-time. The `gh-pages` branch is created automatically by the first
+   workflow run.)
+2. Push to `main` → `.github/workflows/deploy-pages.yml` builds and publishes
+   to the branch root → `https://<user>.github.io/<repo>/`.
+
+### Per-PR previews
+
+Open a PR (from a same-repo branch) and `.github/workflows/pr-preview.yml`
+builds it and publishes to `pr-preview/pr-<N>/`, then comments the link:
+`https://<user>.github.io/<repo>/pr-preview/pr-<N>/`. Previews are
+**never cleaned up** — the branch keeps a running history of past builds. The
+production deploy uses `clean-exclude: pr-preview/` so refreshing `main` never
+wipes them. (Fork PRs are skipped: their read-only token can't push.)
+
+The app uses a relative asset base (`./`) so it works at any depth —
+production root or a `pr-preview/pr-N/` sub-path — without config changes.
 
 ## Architecture
 
