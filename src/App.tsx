@@ -4,6 +4,7 @@ import styled from '@emotion/styled';
 import { Machine } from './components/Machine';
 import { UpgradesPanel } from './components/UpgradesPanel';
 import { StatsPanel } from './components/StatsPanel';
+import { StorePanel } from './components/StorePanel';
 import { Paytable } from './components/Paytable';
 import { theme } from './theme';
 import { useAutospin } from './hooks/useAutospin';
@@ -143,6 +144,9 @@ const UpgradesArea = styled.div`
 const StatsArea = styled.div`
   grid-area: stats;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 3vw, 24px);
 `;
 
 const Footer = styled.footer`
@@ -198,6 +202,7 @@ export function App() {
         <Layout>
           <StatsArea>
             <StatsPanel />
+            <StorePanel />
           </StatsArea>
 
           <MachineArea>
